@@ -36,13 +36,16 @@ export const DEMO_STATS: StatsResponse = {
   totals: { counted: 11020, today: 412, allTime: 18340 },
   isps: DEMO_ISPS,
   trend: DEMO_DAYS.flatMap((day, i) =>
-    DEMO_ISPS.slice(0, 6).map((s, k) => ({
-      day,
-      isp: s.key,
-      n: Math.round(s.n / 30),
-      domestic: Math.min(1, Math.max(0, s.domestic + Math.sin(i * 0.7 + k) * 0.03 + (s.key === 'cht' && i > 22 ? (i - 22) * 0.02 : 0))),
-    })),
-  ),
+    DEMO_ISPS.map((s, k) => {
+      const green = Math.min(1, Math.max(0, s.domestic + Math.sin(i * 0.7 + k) * 0.03 + (s.key === 'cht' && i > 22 ? (i - 22) * 0.02 : 0)))
+      // Split the rest like the ISP's 30-day yellow/red mix.
+      const abroad = s.lights.yellow + s.lights.red
+      const yellow = abroad > 0 ? (1 - green) * (s.lights.yellow / abroad) : 1 - green
+      // Uneven daily volume, so the small ISPs show faded (n < 5) and empty days; kbro has a two-day outage.
+      const n = s.key === 'kbro' && (i === 12 || i === 13) ? 0 : Math.round((s.n / 30) * (0.4 + ((i * 7 + k * 3) % 10) / 8))
+      return { day, isp: s.key, n, domestic: green, lights: { green, yellow, red: 1 - green - yellow } }
+    }),
+  ).filter((r) => r.n > 0),
   regions: [
     ['TPE', 3120, 0.52], ['NWT', 2240, 0.55], ['TAO', 1310, 0.58], ['TXG', 1280, 0.61], ['KHH', 1150, 0.63],
     ['TNN', 720, 0.6], ['HSZ', 410, 0.49], ['CHA', 260, 0.66], ['PIF', 140, 0.7], ['ILA', 96, 0.64],
@@ -77,6 +80,7 @@ const base: TestResult = {
 const FIXTURES: Record<string, TestResult> = {
   red: base,
   optout: { ...base, counted: false, notCountedReason: 'opt-out' },
+  unverified: { ...base, counted: false, notCountedReason: 'unverified' },
   sjc: { ...base, landing: { iata: 'SJC', rttMs: 139, distanceKm: 10380 }, extraKm: 10249, extraMs: 130 },
   ewr: { ...base, landing: { iata: 'EWR', rttMs: 214, distanceKm: 12540 }, extraKm: 12409, extraMs: 205 },
   fra: { ...base, landing: { iata: 'FRA', rttMs: 262, distanceKm: 9390 }, extraKm: 9259, extraMs: 253 },

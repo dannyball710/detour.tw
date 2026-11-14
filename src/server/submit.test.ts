@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SubmitRequest } from '#/lib/types'
 import { serverViewFromCf, visitorOf, type ServerView } from './classify'
 import { MAX_COUNTED_PER_IP_PER_DAY, parseSubmit, processSubmit } from './submit'
@@ -7,6 +7,7 @@ import { ipKey } from './http'
 import { findResult } from './results'
 import { createFakeD1 } from './testing/fake-d1'
 import { createToken } from './token'
+import { nonceToUuid } from './turnstile'
 
 const SECRET = 'test-secret'
 const T0 = Date.UTC(2026, 10, 14, 4, 0)
@@ -25,9 +26,26 @@ const view: ServerView = {
 }
 
 let db: ReturnType<typeof createFakeD1>
+// What the stubbed siteverify answers; each call's form fields are recorded.
+let siteverify: () => Promise<Response>
+let siteverifyCalls: Record<string, string>[]
+const TURNSTILE = { secret: 'ts-secret', hostname: 'detour.tw' }
 
 beforeEach(() => {
   db = createFakeD1()
+  siteverifyCalls = []
+  siteverify = async () => Response.json({ success: true, hostname: 'detour.tw', 'error-codes': [] })
+  vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+    expect(url).toBe('https://challenges.cloudflare.com/turnstile/v0/siteverify')
+    siteverifyCalls.push(Object.fromEntries(init.body as FormData) as Record<string, string>)
+    return siteverify()
+  })
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 const countRows = () => (db.sqlite.prepare('SELECT COUNT(*) AS n FROM tests').get() as { n: number }).n
@@ -44,10 +62,74 @@ async function submit(over: Partial<SubmitRequest> = {}, opts: { view?: Partial<
     contribute: true,
     conn: 'wifi',
     lang: 'zh',
+    turnstile: 'turnstile-token',
     ...over,
   }
-  return processSubmit(body, v, { db: db.d1, secret: SECRET, now: T0 + (opts.age ?? 5_000) })
+  return processSubmit(body, v, { db: db.d1, secret: SECRET, now: T0 + (opts.age ?? 5_000), turnstile: TURNSTILE })
 }
+
+// Owner rule: a visitor who fails the human check still gets the full result, but nothing is written,
+// so scripted traffic cannot reach the statistics.
+describe('Turnstile', () => {
+  const expectNotStored = (r: Awaited<ReturnType<typeof submit>>) => {
+    expect(r).toMatchObject({ ok: true, result: { id: null, counted: false, notCountedReason: 'unverified', light: 'red' } })
+    if (r.ok) expect(r.result.landing).toMatchObject({ iata: 'LAX', rttMs: 150 })
+    expect(countRows()).toBe(0)
+  }
+
+  it('verified: stored and counted; siteverify gets secret, token, client IP and a UUID idempotency key', async () => {
+    const token = await createToken(SECRET, ipKey(view.ip), 'LAX', T0)
+    expect(await submit({}, { token })).toMatchObject({ result: { counted: true } })
+    expect(countRows()).toBe(1)
+    const nonce = JSON.parse(atob(token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))).nonce
+    expect(siteverifyCalls).toEqual([
+      { secret: 'ts-secret', response: 'turnstile-token', remoteip: view.ip, idempotency_key: nonceToUuid(nonce) },
+    ])
+    expect(nonceToUuid(nonce)).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  })
+
+  it('failed verification: full result, nothing stored', async () => {
+    siteverify = async () => Response.json({ success: false, 'error-codes': ['invalid-input-response'] })
+    expectNotStored(await submit())
+  })
+
+  it('missing token: full result, nothing stored, siteverify not called', async () => {
+    expectNotStored(await submit({ turnstile: null }))
+    expect(siteverifyCalls).toEqual([])
+  })
+
+  it('hostname mismatch (token minted on another site): unverified', async () => {
+    siteverify = async () => Response.json({ success: true, hostname: 'evil.example' })
+    expectNotStored(await submit())
+  })
+
+  it('siteverify down, non-200 or timing out: unverified, never an error to the visitor', async () => {
+    siteverify = async () => new Response('oops', { status: 502 })
+    expectNotStored(await submit())
+    siteverify = async () => Promise.reject(new DOMException('timed out', 'TimeoutError'))
+    expectNotStored(await submit())
+  })
+
+  it('opt-out keeps its reason and skips siteverify', async () => {
+    expect(await submit({ contribute: false })).toMatchObject({ result: { notCountedReason: 'opt-out' } })
+    expect(siteverifyCalls).toEqual([])
+  })
+
+  it('the nonce is spent even when unverified, so the submission cannot be replayed', async () => {
+    siteverify = async () => Response.json({ success: false })
+    const token = await createToken(SECRET, ipKey(view.ip), 'LAX', T0)
+    expectNotStored(await submit({}, { token }))
+    expect(await submit({}, { token })).toEqual({ ok: false, status: 409, error: 'replay' })
+  })
+
+  it('logs never contain the token or the IP', async () => {
+    siteverify = async () => Response.json({ success: false, 'error-codes': ['invalid-input-response'] })
+    await submit()
+    const logged = JSON.stringify((console.warn as unknown as { mock: { calls: unknown[][] } }).mock.calls)
+    expect(logged).not.toContain('turnstile-token')
+    expect(logged).not.toContain(view.ip)
+  })
+})
 
 // Hard failures reject the request outright: these are the cheap ways to fabricate or replay a test.
 describe('hard validation', () => {
@@ -101,11 +183,19 @@ describe('parseSubmit shape validation', () => {
     contribute: true,
     conn: null,
     lang: 'en',
+    turnstile: 'tok',
   }
   const parse = (over: object) => parseSubmit(JSON.stringify({ ...valid, ...over }))
 
   it('accepts a minimal valid body and drops unknown keys', () => {
     expect(parse({ extra: 'x' })).toEqual(valid)
+  })
+
+  it('a missing turnstile field (older client) is read as null; an oversized token is rejected', () => {
+    const { turnstile: _, ...old } = valid
+    expect(parseSubmit(JSON.stringify(old))).toEqual({ ...valid, turnstile: null })
+    expect(parse({ turnstile: 'x'.repeat(2049) })).toBeNull()
+    expect(parse({ turnstile: 42 })).toBeNull()
   })
 
   it.each([

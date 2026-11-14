@@ -1,18 +1,27 @@
 import type { ReactNode } from 'react'
 import { useDemoStats } from '#/client/use-demo-stats'
-import { coloCity, countryName, fmtDate, fmtNum, getDict, ispKeyName } from '#/i18n'
+import { coloCity, countryName, fmtDate, fmtDay, fmtNum, getDict, ispKeyName } from '#/i18n'
 import { lightForLanding } from '#/lib/geo'
 import type { IspStats, Lang, StatsResponse } from '#/lib/types'
 import { PageBand } from './PageBand'
 import { IspBoard, LightLegend, MIN_SAMPLE } from './StatsSummary'
-import { ShareBar, TrendChart, pct } from './charts'
-import type { TrendSeries } from './charts'
+import { DailyLights, MIN_DAY_N, ShareBar, TrendChart, dailyBars, pct, windowDays } from './charts'
+import type { DailyBar, TrendSeries } from './charts'
 
 const TREND_SERIES = 6
 const COLO_ROWS = 6
 
-function ColoDistribution({ lang, isp }: { lang: Lang; isp: IspStats }) {
+function ColoDistribution({ lang, isp, bars }: { lang: Lang; isp: IspStats; bars: DailyBar[] }) {
   const t = getDict(lang)
+  const name = ispKeyName(isp.key, lang)
+  const shareLabels = { green: t.stats.domestic, yellow: t.stats.yellow, red: t.stats.red }
+  const describe = (b: DailyBar) => {
+    const date = fmtDay(b.day, lang)
+    if (!b.lights) return t.report.daily.none(date)
+    const lights = b.lights
+    const shares = (['green', 'yellow', 'red'] as const).map((k) => `${shareLabels[k]} ${pct(lights[k])}`).join(t.listSep)
+    return t.report.daily.day(date, fmtNum(b.n, lang), shares) + (b.n < MIN_DAY_N ? t.report.daily.few : '')
+  }
   const rest = isp.colos.slice(COLO_ROWS).reduce((s, c) => s + c.n, 0)
   const rows = isp.colos.slice(0, COLO_ROWS).map((c) => ({
     key: c.iata,
@@ -26,7 +35,7 @@ function ColoDistribution({ lang, isp }: { lang: Lang; isp: IspStats }) {
   return (
     <div className="dist" data-low={isp.n < MIN_SAMPLE ? '' : undefined}>
       <h3>
-        {ispKeyName(isp.key, lang)}
+        {name}
         {isp.n < MIN_SAMPLE && <span className="tag">{t.stats.lowSample}</span>}
       </h3>
       <ul>
@@ -39,6 +48,16 @@ function ColoDistribution({ lang, isp }: { lang: Lang; isp: IspStats }) {
           </li>
         ))}
       </ul>
+      {bars.length > 0 && (
+        <DailyLights
+          bars={bars}
+          caption={t.report.daily.caption(bars.length)}
+          label={t.report.daily.label(name, bars.length)}
+          describe={describe}
+          first={fmtDay(bars[0].day, lang)}
+          last={fmtDay(bars[bars.length - 1].day, lang)}
+        />
+      )}
     </div>
   )
 }
@@ -69,6 +88,7 @@ export function StatsPage({ lang, stats: loaded }: { lang: Lang; stats: StatsRes
       name: ispKeyName(i.key, lang),
       points: (stats?.trend ?? []).filter((r) => r.isp === i.key).map((r) => ({ day: r.day, v: r.domestic, n: r.n })),
     }))
+  const statsDays = stats ? windowDays(stats.generatedAt, stats.windowDays) : []
   const intl = stats ? [...stats.intl].sort((x, y) => y.n - x.n) : []
   const empty = !!stats && stats.totals.allTime === 0
 
@@ -95,9 +115,10 @@ export function StatsPage({ lang, stats: loaded }: { lang: Lang; stats: StatsRes
                 <h2 id="colo-h">{t.coloHeading}</h2>
                 <div className="dist-grid">
                   {isps.map((i) => (
-                    <ColoDistribution key={i.key} lang={lang} isp={i} />
+                    <ColoDistribution key={i.key} lang={lang} isp={i} bars={dailyBars(stats.trend, i.key, statsDays)} />
                   ))}
                 </div>
+                <LightLegend lang={lang} />
               </section>
             )}
 

@@ -4,6 +4,7 @@ import { classify, softFlags, visitorOf, type ServerView } from './classify'
 import { ipKey } from './http'
 import { rowToResult, type ResultRow } from './results'
 import { dailyHash, ipHashForToken, randomId, taipeiDay, timingSafeEqual, verifyToken } from './token'
+import { verifyTurnstile, type TurnstileConfig } from './turnstile'
 
 export const MAX_BODY_BYTES = 8192
 const MIN_TOKEN_AGE_MS = 2_000
@@ -43,6 +44,9 @@ export function parseSubmit(text: string): SubmitRequest | null {
   if (typeof b.contribute !== 'boolean') return null
   if (!(b.conn === null || (typeof b.conn === 'string' && CONN_RE.test(b.conn)))) return null
   if (b.lang !== 'zh' && b.lang !== 'en') return null
+  // Missing (older client) or null both mean "no Turnstile token": the test is shown but not stored.
+  const turnstile = b.turnstile ?? null
+  if (!(turnstile === null || (typeof turnstile === 'string' && turnstile.length <= 2048))) return null
 
   let ref: SubmitRequest['ref'] = null
   if (b.ref !== null) {
@@ -78,6 +82,7 @@ export function parseSubmit(text: string): SubmitRequest | null {
     contribute: b.contribute,
     conn: b.conn,
     lang: b.lang,
+    turnstile,
   }
 }
 
@@ -164,6 +169,7 @@ export interface SubmitDeps {
   now: number
   /** Dev only: skip ref-ip / ref-loc because the dev server sees loopback, not our public IP. */
   skipRefIdentity?: boolean
+  turnstile: TurnstileConfig
 }
 
 export type SubmitOutcome = { ok: true; result: TestResult } | { ok: false; status: number; error: string }
@@ -206,7 +212,9 @@ export async function processSubmit(body: SubmitRequest, view: ServerView, deps:
   // The browser can switch colo between /api/start and submit only in rare edge cases; anything else is fabricated.
   if (body.own.colo !== view.colo && body.own.colo !== token.colo) return fail(400, 'colo_mismatch')
 
-  // Burn the nonce last, so it is only spent by an otherwise valid request.
+  // Burn the nonce last among the hard checks, so it is only spent by an otherwise valid request. It is spent
+  // even if Turnstile then fails: the nonces table is replay protection, not test data, and an unverified
+  // submission must not be replayable either (each replay would cost a siteverify call).
   const nonce = await db
     .prepare('INSERT OR IGNORE INTO nonces (nonce, created_at) VALUES (?, ?)')
     .bind(token.nonce, now)
@@ -214,11 +222,15 @@ export async function processSubmit(body: SubmitRequest, view: ServerView, deps:
   if (!nonce.meta.changes) return fail(409, 'replay')
 
   const ev = evaluate(body, view, now, deps.skipRefIdentity)
+  const notStored = (reason: 'opt-out' | 'unverified'): SubmitOutcome => ({
+    ok: true,
+    result: { ...rowToResult(ev.row), id: null, counted: false, notCountedReason: reason },
+  })
 
-  if (!body.contribute) {
-    // Opt-out: same computation, nothing stored.
-    return { ok: true, result: { ...rowToResult(ev.row), id: null, counted: false, notCountedReason: 'opt-out' } }
-  }
+  // Same computation, nothing stored. Opt-out needs no human check, so siteverify is skipped.
+  if (!body.contribute) return notStored('opt-out')
+  // Owner rule: an unverified visitor still sees the full result, but nothing is written.
+  if (!(await verifyTurnstile(deps.turnstile, body.turnstile, view.ip, token.nonce))) return notStored('unverified')
 
   const row = { ...ev.row, id: randomId() }
   const [ipHash, deviceHash] = await Promise.all([

@@ -53,7 +53,7 @@ describe('stats snapshot', () => {
   it('miss: computes once and stores; afterwards the stored snapshot is served even if data changed', async () => {
     insertTest()
     const first = await loadStatsSnapshot(db.d1, NOW)
-    expect(snapshotRows()).toEqual([{ key: 'stats', generated_at: NOW }])
+    expect(snapshotRows()).toEqual([{ key: 'stats-v2', generated_at: NOW }])
     insertTest()
     const second = await loadStatsSnapshot(db.d1, NOW + 60_000)
     expect(second).toEqual(first)
@@ -97,7 +97,7 @@ describe('/api/stats HTTP', () => {
     const snap = await refreshStatsSnapshot(db.d1, NOW)
     await statsResponse(req(), db.d1, SITE)
     await flushWaitUntil()
-    const stored = cache.entries.get(`${SITE}/api/stats`)!
+    const stored = cache.entries.get(`${SITE}/api/stats?v=stats-v2`)!
     expect(Object.fromEntries(stored.headers)['cache-control']).toBe('public, max-age=300')
     insertTest()
     await refreshStatsSnapshot(db.d1, NOW + 1)
@@ -118,13 +118,16 @@ describe('cron dispatch', () => {
     insertTest({ createdAt: NOW - 3 * 86_400_000 })
     await runCron(CRON_HOURLY, { db: db.d1, bucket: r2.asBucket() }, NOW)
     expect(db.sqlite.prepare('SELECT ip_hash FROM tests').get()).toEqual({ ip_hash: null })
-    expect([...r2.objects.keys()].sort()).toEqual([dailyExportKey('2026-11-13'), EXPORT_KEY])
+    // raw/ = the private archive (archive.test.ts)
+    const publicKeys = () => [...r2.objects.keys()].filter((k) => !k.startsWith('raw/')).sort()
+    expect(publicKeys()).toEqual([dailyExportKey('2026-11-13'), EXPORT_KEY])
     expect(snapshotRows()).toHaveLength(0)
 
     const daily = r2.objects.get(dailyExportKey('2026-11-13'))
+    const puts = r2.puts
     await runCron(CRON_HOURLY, { db: db.d1, bucket: r2.asBucket() }, NOW + 3600_000)
     expect(r2.objects.get(dailyExportKey('2026-11-13'))).toBe(daily)
-    expect(r2.puts).toBe(3)
+    expect(r2.puts).toBe(puts + 1) // only the main export is rewritten
   })
 
   // Invocation logs are off, so a failing cron task is only visible through its own console.error.

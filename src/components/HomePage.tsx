@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MeasureError, getContribute, runMeasurement, setContribute } from '#/client/measure'
 import type { MeasureProgress } from '#/client/measure'
+import { loadTurnstile } from '#/client/turnstile'
 import { useDemoStats } from '#/client/use-demo-stats'
 import { getDict } from '#/i18n'
 import { isTaiwanColo } from '#/lib/geo'
@@ -104,6 +105,8 @@ export function HomePage({ lang, stats: loaded, shared }: Props) {
   const startsShared = useRef(!!shared)
   useEffect(() => {
     setContributeState(getContribute())
+    // Fetched now, while /api/start is in flight; the measurement waits for it before timing anything.
+    loadTurnstile()
     if (!startsShared.current) run()
   }, [run])
 

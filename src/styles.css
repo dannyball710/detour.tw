@@ -2283,6 +2283,8 @@ main > .hero:first-child {
 }
 
 .dist {
+  display: flex;
+  flex-direction: column;
   padding: 16px 18px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -2326,6 +2328,84 @@ main > .hero:first-child {
   font-family: var(--font-mono);
   font-size: 12px;
   text-align: right;
+}
+
+/* Pushed to the card's foot so the charts of side-by-side cards line up. */
+.daily {
+  margin: auto 0 0;
+  padding-top: 16px;
+}
+
+.daily figcaption {
+  margin-bottom: 6px;
+  color: var(--graphite);
+  font-size: 12px;
+}
+
+.daily-plot {
+  position: relative;
+}
+
+.daily-plot svg {
+  display: block;
+  width: 100%;
+  height: 56px;
+  /* The selected-day outline sits just outside the first and last bars. */
+  overflow: visible;
+  touch-action: pan-y;
+}
+
+.daily rect[data-light] {
+  fill: var(--lamp);
+}
+
+.daily g[data-few] {
+  opacity: 0.35;
+}
+
+.daily-none {
+  fill: var(--line-soft);
+}
+
+.daily-hatch {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.daily-cursor {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.daily-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  z-index: 2;
+  width: max-content;
+  max-width: min(240px, 100%);
+  margin: 0;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 12px;
+  line-height: 1.45;
+  pointer-events: none;
+}
+
+.daily-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: var(--graphite);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+[data-low] .daily-plot svg {
+  opacity: 0.45;
 }
 
 .trend {

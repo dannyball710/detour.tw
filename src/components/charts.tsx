@@ -1,4 +1,6 @@
-import type { IspStats } from '#/lib/types'
+import { useEffect, useRef, useState } from 'react'
+import type { PointerEvent } from 'react'
+import type { IspStats, StatsResponse } from '#/lib/types'
 
 export const pct = (v: number) => `${Math.round(v * 100)}%`
 
@@ -45,7 +47,7 @@ const W = 720
 const H = 280
 const PAD = { l: 44, r: 16, t: 12, b: 28 }
 // A day with only a handful of tests swings wildly; leave a gap instead of plotting noise.
-const MIN_DAY_N = 5
+export const MIN_DAY_N = 5
 
 export function TrendChart({ series, days, label }: { series: TrendSeries[]; days: string[]; label: string }) {
   const x = (i: number) => PAD.l + (days.length > 1 ? (i / (days.length - 1)) * (W - PAD.l - PAD.r) : 0)
@@ -101,6 +103,156 @@ export function TrendChart({ series, days, label }: { series: TrendSeries[]; day
           })}
         </ul>
       </figcaption>
+    </figure>
+  )
+}
+
+export interface DailyBar {
+  day: string
+  n: number
+  /** Null on a day without tests. */
+  lights: IspStats['lights'] | null
+}
+
+/** The `count` Taipei days ending on the day of `at`, oldest first: the whole stats window, empty days included. */
+export function windowDays(at: number, count: number): string[] {
+  const end = new Date(at + 8 * 3600_000)
+  return Array.from({ length: count }, (_, i) =>
+    new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() - (count - 1 - i))).toISOString().slice(0, 10),
+  )
+}
+
+/** One bar per window day for `isp`; the trend only lists days that had tests. */
+export function dailyBars(trend: StatsResponse['trend'], isp: string, days: string[]): DailyBar[] {
+  const byDay = new Map(trend.filter((r) => r.isp === isp).map((r) => [r.day, r]))
+  return days.map((day) => {
+    const r = byDay.get(day)
+    return r && r.n > 0 ? { day, n: r.n, lights: r.lights } : { day, n: 0, lights: null }
+  })
+}
+
+const STEP = 10
+const BAR = 8
+const DAILY_H = 56
+// A sliver of card between stacked segments, so they read apart without relying on hue.
+const SEP = 1
+// Taiwan at the base, like the share it stands for; legend order bottom to top.
+const STACK = ['green', 'yellow', 'red'] as const
+
+function Stack({ lights, x }: { lights: IspStats['lights']; x: number }) {
+  const parts = STACK.filter((k) => lights[k] > 0)
+  let top = DAILY_H
+  return parts.map((k, j) => {
+    const h = lights[k] * DAILY_H
+    top -= h
+    const gap = j < parts.length - 1 ? SEP : 0
+    return <rect key={k} data-light={k} x={x} y={top + gap} width={BAR} height={Math.max(0, h - gap)} />
+  })
+}
+
+function Hatch({ x }: { x: number }) {
+  // Diagonal strokes clipped to the slot: the plot does not clip (the day outline overhangs it).
+  let d = ''
+  for (let y = 0; y < DAILY_H + BAR; y += 6) {
+    const t0 = Math.max(0, y - DAILY_H)
+    const t1 = Math.min(BAR, y)
+    if (t1 > t0) d += `M${x + t0},${y - t0}L${x + t1},${y - t1}`
+  }
+  return (
+    <>
+      <rect className="daily-none" x={x} y={0} width={BAR} height={DAILY_H} />
+      <path className="daily-hatch" d={d} />
+    </>
+  )
+}
+
+/** A 100% stacked bar per day. `describe` gives each bar its accessible name and tooltip text. */
+export function DailyLights({
+  bars,
+  caption,
+  label,
+  describe,
+  first,
+  last,
+}: {
+  bars: DailyBar[]
+  caption: string
+  label: string
+  describe: (b: DailyBar) => string
+  first: string
+  last: string
+}) {
+  const [active, setActive] = useState<number | null>(null)
+  const plot = useRef<SVGSVGElement>(null)
+  const open = active != null
+  // A tap elsewhere or a scroll puts the tooltip away; touch has no pointer-leave to do it.
+  useEffect(() => {
+    if (!open) return
+    const close = (e: Event) => {
+      if (e.type === 'pointerdown' && plot.current?.contains(e.target as Node)) return
+      setActive(null)
+    }
+    document.addEventListener('pointerdown', close, true)
+    window.addEventListener('scroll', close, { passive: true })
+    return () => {
+      document.removeEventListener('pointerdown', close, true)
+      window.removeEventListener('scroll', close)
+    }
+  }, [open])
+  const at = (e: PointerEvent<SVGSVGElement>) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    return Math.max(0, Math.min(bars.length - 1, Math.floor(((e.clientX - r.left) / r.width) * bars.length)))
+  }
+  const n = bars.length
+  // Near either edge the tooltip hangs inward so it stays inside the card.
+  const tipStyle =
+    active == null
+      ? undefined
+      : active < n / 4
+        ? { left: `${(active / n) * 100}%` }
+        : active >= (n * 3) / 4
+          ? { right: `${(1 - (active + 1) / n) * 100}%` }
+          : { left: `${((active + 0.5) / n) * 100}%`, transform: 'translateX(-50%)' }
+
+  return (
+    <figure className="daily">
+      <figcaption>{caption}</figcaption>
+      <div className="daily-plot">
+        <svg
+          ref={plot}
+          viewBox={`0 0 ${n * STEP - (STEP - BAR)} ${DAILY_H}`}
+          preserveAspectRatio="none"
+          role="group"
+          aria-label={label}
+          onPointerMove={(e) => e.pointerType === 'mouse' && setActive(at(e))}
+          onPointerLeave={(e) => e.pointerType === 'mouse' && setActive(null)}
+          // Touch has no hover: a tap shows that day, a second tap on it hides it.
+          onPointerDown={(e) => {
+            if (e.pointerType === 'mouse') return
+            const i = at(e)
+            setActive((a) => (a === i ? null : i))
+          }}
+        >
+          {bars.map((b, i) => (
+            <g key={b.day} role="img" aria-label={describe(b)} data-few={b.lights && b.n < MIN_DAY_N ? '' : undefined}>
+              {b.lights && <Stack lights={b.lights} x={i * STEP} />}
+              {!b.lights && <Hatch x={i * STEP} />}
+            </g>
+          ))}
+          {active != null && (
+            <rect className="daily-cursor" x={active * STEP - 1} y={0.5} width={BAR + 2} height={DAILY_H - 1} vectorEffect="non-scaling-stroke" />
+          )}
+        </svg>
+        {active != null && (
+          <p className="daily-tip" style={tipStyle} aria-hidden="true">
+            {describe(bars[active])}
+          </p>
+        )}
+      </div>
+      <div className="daily-axis" aria-hidden="true">
+        <span>{first}</span>
+        <span>{last}</span>
+      </div>
     </figure>
   )
 }

@@ -119,14 +119,30 @@ describe('computeStats', () => {
   it('trend and regions', async () => {
     const s = await computeStats(db.d1, NOW)
     expect(s.trend).toEqual([
-      { day: '2026-11-11', isp: 'cht', n: 1, domestic: 0 },
-      { day: '2026-11-14', isp: 'cht', n: 2, domestic: 0.5 },
-      { day: '2026-11-14', isp: 'twm', n: 2, domestic: 1 },
+      { day: '2026-11-11', isp: 'cht', n: 1, domestic: 0, lights: { green: 0, yellow: 0, red: 1 } },
+      { day: '2026-11-14', isp: 'cht', n: 2, domestic: 0.5, lights: { green: 0.5, yellow: 0, red: 0.5 } },
+      { day: '2026-11-14', isp: 'twm', n: 2, domestic: 1, lights: { green: 1, yellow: 0, red: 0 } },
     ])
     expect(s.regions).toEqual([
       { code: 'TPE', n: 3, abroad: 1 / 3 },
       { code: 'KHH', n: 2, abroad: 0.5 },
     ])
+  })
+
+  // The trend chart stacks Taiwan / nearby / far per day: each day's shares must add up to the whole.
+  it('trend lights on a mixed day, per ISP and per Taipei day, summing to 1', async () => {
+    for (const [colo, light] of [['TPE', 'green'], ['KHH', 'green'], ['HKG', 'yellow'], ['LAX', 'red']]) {
+      insert({ isp: 'fet', colo, light, rtt: 50, daysAgo: 1 })
+    }
+    insert({ isp: 'fet', colo: 'NRT', light: 'yellow', rtt: 50, counted: 0, daysAgo: 1 }) // not counted: ignored
+    const fet = (await computeStats(db.d1, NOW)).trend.filter((t) => t.isp === 'fet')
+    expect(fet).toEqual([
+      { day: '2026-11-13', isp: 'fet', n: 4, domestic: 0.5, lights: { green: 0.5, yellow: 0.25, red: 0.25 } },
+    ])
+    for (const t of (await computeStats(db.d1, NOW)).trend) {
+      expect(t.lights.green + t.lights.yellow + t.lights.red).toBeCloseTo(1)
+      expect(t.domestic).toBe(t.lights.green)
+    }
   })
 
   it('international baseline uses baseline rows only', async () => {

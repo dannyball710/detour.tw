@@ -1,5 +1,6 @@
 import type { Lang, StartResponse, SubmitRequest, TestResult, Trace } from '#/lib/types'
 import { KEYS, readStore, writeStore } from './storage'
+import { turnstileSettled, turnstileToken } from './turnstile'
 
 export type MeasureErrorKind = 'failed' | 'rate' | 'offline'
 
@@ -29,6 +30,7 @@ const SUBMIT_TIMEOUT_MS = 10000
 // The server rejects tokens younger than 2 s (a real test takes that long); keep a margin.
 const MIN_TOKEN_AGE_MS = 2300
 const REF_URL = 'https://cloudflare.com/cdn-cgi/trace'
+const TURNSTILE_LOAD_WAIT_MS = 2000
 
 function ownTraceUrl(): string {
   // Localhost has no /cdn-cgi/trace; the dev API mimics it.
@@ -137,6 +139,9 @@ export async function runMeasurement(lang: Lang, onProgress: (p: MeasureProgress
 
   const who = { user: start.user, isp: start.isp }
   onProgress({ step: 0, ...who })
+  // The Turnstile script (started at page load) must be in before the first timed request, so its
+  // download cannot slow one down. Normally it already is; a slow network waits a little, never long.
+  await turnstileSettled(TURNSTILE_LOAD_WAIT_MS)
 
   // No request may run past the test's budget: the 15 s limit is a real ceiling.
   const budget = () => Math.min(FETCH_TIMEOUT_MS, TEST_BUDGET_MS - (performance.now() - startedAt))
@@ -178,6 +183,10 @@ export async function runMeasurement(lang: Lang, onProgress: (p: MeasureProgress
   if (ownRtts.length < 3) return fail(null)
   if (refRtts.length < 3) refTrace = null
 
+  // Only now, with every timed request done, does the challenge run. Opted out, nothing is stored,
+  // so the server skips the check and so do we.
+  const contribute = getContribute()
+  const turnstile = contribute ? turnstileToken() : Promise.resolve(null)
   const wait = MIN_TOKEN_AGE_MS - (performance.now() - tokenAt)
   if (wait > 0) await sleep(wait)
   onProgress({ step: 2, ...seen })
@@ -199,9 +208,11 @@ export async function runMeasurement(lang: Lang, onProgress: (p: MeasureProgress
       : null,
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     deviceId: getDeviceId(),
-    contribute: getContribute(),
+    contribute,
     conn,
     lang,
+    // Without a token the result is still shown, just not stored.
+    turnstile: await turnstile,
   }
 
   try {

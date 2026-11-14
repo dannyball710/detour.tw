@@ -12,7 +12,9 @@ const MEDIAN_SAMPLE = 50_000
 // The snapshot is rebuilt every 5 minutes by cron; the per-colo edge copy must not outlive that.
 const EDGE_TTL_SECONDS = 300
 export const STATS_CACHE_CONTROL = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600'
-const SNAPSHOT_KEY = 'stats'
+// Bump on any StatsResponse shape change: the snapshot row and the edge copies are keyed by it, so no
+// stale shape is served after a deploy (the new key starts empty and is computed once).
+const SNAPSHOT_KEY = 'stats-v2'
 
 const TW_COLOS = new Set(Object.values(COLOS).filter((c) => c.cc === 'TW').map((c) => c.iata))
 const isDomestic = (iata: string) => TW_COLOS.has(iata)
@@ -54,8 +56,8 @@ export async function computeStats(db: D1Database, now: number): Promise<StatsRe
       .bind(since),
     db
       .prepare(
-        `SELECT day, isp_key, colo, COUNT(*) AS n FROM tests
-        WHERE counted = 1 AND day >= ? GROUP BY day, isp_key, colo`,
+        `SELECT day, isp_key, light, COUNT(*) AS n FROM tests
+        WHERE counted = 1 AND day >= ? GROUP BY day, isp_key, light`,
       )
       .bind(since),
     db
@@ -123,13 +125,14 @@ export async function computeStats(db: D1Database, now: number): Promise<StatsRe
     })
     .sort((a, b) => b.n - a.n || a.key.localeCompare(b.key))
 
-  const trend = new Map<string, { day: string; isp: string; n: number; dom: number }>()
-  for (const r of trendRes.results as unknown as { day: string; isp_key: string; colo: string; n: number }[]) {
+  // Counted rows are category `tw`, whose light is always green / yellow / red, so the shares sum to 1.
+  const trend = new Map<string, { day: string; isp: string; n: number; green: number; yellow: number; red: number }>()
+  for (const r of trendRes.results as unknown as { day: string; isp_key: string; light: string; n: number }[]) {
     const k = `${r.day}|${r.isp_key}`
     let t = trend.get(k)
-    if (!t) trend.set(k, (t = { day: r.day, isp: r.isp_key, n: 0, dom: 0 }))
+    if (!t) trend.set(k, (t = { day: r.day, isp: r.isp_key, n: 0, green: 0, yellow: 0, red: 0 }))
     t.n += r.n
-    if (isDomestic(r.colo)) t.dom += r.n
+    if (r.light === 'green' || r.light === 'yellow' || r.light === 'red') t[r.light] += r.n
   }
 
   const regions = new Map<string, { n: number; abroad: number }>()
@@ -157,7 +160,10 @@ export async function computeStats(db: D1Database, now: number): Promise<StatsRe
     totals: { counted: totals.counted, today: totals.today, allTime: totals.allTime },
     isps: ispStats,
     trend: [...trend.values()]
-      .map((t) => ({ day: t.day, isp: t.isp, n: t.n, domestic: share(t.dom, t.n) }))
+      .map((t) => {
+        const lights = { green: share(t.green, t.n), yellow: share(t.yellow, t.n), red: share(t.red, t.n) }
+        return { day: t.day, isp: t.isp, n: t.n, domestic: lights.green, lights }
+      })
       .sort((a, b) => a.day.localeCompare(b.day) || a.isp.localeCompare(b.isp)),
     // abroad is a share (0..1), like `domestic` elsewhere.
     regions: [...regions.entries()]
@@ -206,7 +212,7 @@ export async function loadStatsSnapshot(db: D1Database, now: number): Promise<Sn
 
 /** Edge cache (fixed key, so it cannot be busted) -> snapshot row -> compute once. */
 function cachedStats(db: D1Database, siteUrl: string): Promise<Response> {
-  return edgeCached(`${siteUrl}/api/stats`, EDGE_TTL_SECONDS, async () => {
+  return edgeCached(`${siteUrl}/api/stats?v=${SNAPSHOT_KEY}`, EDGE_TTL_SECONDS, async () => {
     const s = await loadStatsSnapshot(db, Date.now())
     return new Response(s.body, {
       headers: {

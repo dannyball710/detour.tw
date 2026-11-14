@@ -49,11 +49,21 @@ export class MemoryR2 {
       size: o.data.byteLength,
       customMetadata: o.customMetadata,
       text: async () => new TextDecoder().decode(o.data),
+      arrayBuffer: async () => o.data.slice().buffer,
     }
   }
 
-  async put(key: string, value: string, opts?: { customMetadata?: Record<string, string> }) {
-    const data = new TextEncoder().encode(value)
+  async list(opts: { prefix?: string; cursor?: string }) {
+    // Pages of 2 so callers' cursor handling is exercised.
+    const keys = [...this.objects.keys()].filter((k) => k.startsWith(opts.prefix ?? '')).sort()
+    const start = Number(opts.cursor ?? 0)
+    const page = keys.slice(start, start + 2)
+    const truncated = start + 2 < keys.length
+    return { objects: page.map((key) => ({ key })), truncated, cursor: truncated ? String(start + 2) : undefined }
+  }
+
+  async put(key: string, value: string | ArrayBuffer, opts?: { customMetadata?: Record<string, string> }) {
+    const data = typeof value === 'string' ? new TextEncoder().encode(value) : new Uint8Array(value)
     this.objects.set(key, { data, etag: `e${++etagSeq}`, uploaded: new Date(), customMetadata: opts?.customMetadata })
     this.puts++
   }

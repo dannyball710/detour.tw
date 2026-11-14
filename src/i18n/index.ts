@@ -101,3 +101,12 @@ export function fmtDate(ms: number, lang: Lang, withTime = false): string {
     ...(withTime ? { hour: '2-digit', minute: '2-digit', hour12: false } : {}),
   }).format(new Date(ms))
 }
+
+/** A stats day ('YYYY-MM-DD', already a Taipei date) as month and day; read as UTC so no zone shifts it. */
+export function fmtDay(day: string, lang: Lang): string {
+  return new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'zh-TW', {
+    timeZone: 'UTC',
+    month: lang === 'en' ? 'short' : 'numeric',
+    day: 'numeric',
+  }).format(new Date(`${day}T00:00:00Z`))
+}

@@ -1,3 +1,4 @@
+import { archiveDays } from './archive'
 import { buildExport } from './export'
 import { refreshStatsSnapshot } from './stats'
 
@@ -37,11 +38,18 @@ export async function runCron(cron: string, deps: { db: D1Database; bucket: R2Bu
     case CRON_STATS:
       await task('stats-snapshot', () => refreshStatsSnapshot(deps.db, now))
       return
-    case CRON_HOURLY:
+    case CRON_HOURLY: {
       // Purge first: the privacy promise must not depend on the export succeeding.
       await task('purge', () => purgeExpired(deps.db, now))
-      await task('export', () => buildExport(deps.db, deps.bucket, now))
+      // Export and archive are independent: one failing must not starve the other; both retry next hour.
+      const outcomes = await Promise.allSettled([
+        task('export', () => buildExport(deps.db, deps.bucket, now)),
+        task('archive', () => archiveDays(deps.db, deps.bucket, now)),
+      ])
+      const failed = outcomes.find((o): o is PromiseRejectedResult => o.status === 'rejected')
+      if (failed) throw failed.reason
       return
+    }
     default:
       console.warn('unknown cron schedule', cron)
   }

@@ -22,6 +22,8 @@ export type NotCountedReason =
   | 'vpn'
   | 'duplicate'
   | 'suspicious'
+  /** Turnstile verification failed or was missing: shown to the visitor, nothing stored. */
+  | 'unverified'
 
 /** GET /api/start */
 export interface StartResponse {
@@ -55,6 +57,8 @@ export interface SubmitRequest {
   contribute: boolean
   conn: string | null
   lang: Lang
+  /** Cloudflare Turnstile (invisible) token; null when the widget failed. Unverified tests are shown but not stored. */
+  turnstile: string | null
 }
 
 export interface TestResult {
@@ -103,7 +107,15 @@ export interface StatsResponse {
   totals: { counted: number; today: number; allTime: number }
   isps: IspStats[]
   /** Daily share of domestic landings per ISP over the window. */
-  trend: { day: string; isp: string; n: number; domestic: number }[]
+  trend: {
+    day: string
+    isp: string
+    n: number
+    /** Same as lights.green; kept for compatibility. */
+    domestic: number
+    /** Share of that day's counted tests by light (Taiwan / nearby / far), 0..1, summing to 1. */
+    lights: { green: number; yellow: number; red: number }
+  }[]
   /** TW subdivisions (counted tests only). */
   regions: { code: string; n: number; abroad: number }[]
   /** International baseline: tests from outside Taiwan. */
