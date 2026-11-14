@@ -1,0 +1,55 @@
+/**
+ * Detour — 網路出國了嗎？
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "detour",
+	"compatibility_date": "2026-11-13",
+	"compatibility_flags": ["nodejs_compat"],
+	// Custom entry so we can export a scheduled() handler next to TanStack Start's fetch.
+	"main": "src/server.ts",
+	// Invocation logs and traces record request metadata and headers (incl. the client IP) for days;
+	// we promise not to store IPs, so only our own console output is kept (it never logs IPs).
+	"observability": {
+		"enabled": true,
+		"logs": { "invocation_logs": false },
+		"traces": { "enabled": false }
+	},
+	"upload_source_maps": true,
+	// The zone MUST stay on the Free plan: the whole measurement relies on this
+	// hostname being routed like an ordinary free-plan Cloudflare site.
+	"routes": [{ "pattern": "detour.tw", "custom_domain": true }],
+	// *.workers.dev is routed unlike a free-plan zone; tests run there would pollute the statistics.
+	"workers_dev": false,
+	// No Smart Placement: request.cf.colo and clientTcpRtt must describe the visitor's landing colo,
+	// which the anti-abuse checks rely on; running the Worker elsewhere could change them.
+	"preview_urls": false,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "detour",
+			"database_id": "aa29e66f-7d79-4d7b-bf3c-e7e9fcb09d0f",
+			"migrations_dir": "migrations"
+		}
+	],
+	"ratelimits": [
+		// Per-IP: test starts
+		{ "name": "START_LIMITER", "namespace_id": "7101", "simple": { "limit": 12, "period": 60 } },
+		// Per-IP: submissions
+		{ "name": "SUBMIT_LIMITER", "namespace_id": "7102", "simple": { "limit": 8, "period": 60 } }
+	],
+	// Public CSV export, rebuilt hourly by cron (plus a dated daily copy).
+	"r2_buckets": [{ "binding": "EXPORTS", "bucket_name": "detour-exports" }],
+	"triggers": {
+		// Dispatched on controller.cron in src/server/cron.ts (keep the strings in sync):
+		// every 5 min: stats snapshot; hourly: purge expired hashes / nonces, then rebuild the CSV in R2.
+		"crons": ["*/5 * * * *", "17 * * * *"]
+	},
+	"vars": {
+		"SITE_URL": "https://detour.tw"
+	},
+	// TOKEN_SECRET — HMAC key for test tokens and daily IP hashes. Set by CI (--secrets-file);
+	// local dev: put TOKEN_SECRET=... in .dev.vars
+	"secrets": { "required": ["TOKEN_SECRET"] }
+}

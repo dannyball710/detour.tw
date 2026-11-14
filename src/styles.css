@@ -1,0 +1,2902 @@
+@import 'tailwindcss';
+
+/* Tokens: two inks (Kuroshio blue, paper white); colour is reserved for the status lights. */
+:root {
+  --sea: #0e3b63;
+  --shoal: #1b4f7e;
+  --paper: #fff;
+  --fog: #f1f4f7;
+  --ink: #0c1b2a;
+  --graphite: #51616f;
+  --line: #cfd8e0;
+  --line-soft: #e4e9ee;
+  --on-sea-soft: #bcd0e3;
+
+  --font-display: 'Fira Sans Extra Condensed', 'Arial Narrow', 'Noto Sans TC', sans-serif;
+  --font-mono: 'B612 Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Noto Sans TC', monospace;
+  --font-body: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-travel: cubic-bezier(0.45, 0, 0.2, 1);
+  --gutter: 16px;
+
+  /* Neutral light: before a result, and wherever no light applies. */
+  --light: var(--graphite);
+  --lamp: #dfe6ec;
+  --lamp-ink: var(--graphite);
+  --light-sea: #fff;
+}
+
+/* --light: text on paper. --lamp / --lamp-ink: the disc and its glyph, bars. --light-sea: on the chart. */
+[data-light='green'] {
+  --light: #0b7f4d;
+  --lamp: #17a868;
+  --lamp-ink: #fff;
+  --light-sea: #56d99a;
+}
+[data-light='yellow'] {
+  --light: #8f5500;
+  /* Display-size text only needs 3:1, so it can stay amber instead of going brown. */
+  --light-big: #c47b00;
+  --lamp: #f5b324;
+  --lamp-ink: var(--ink);
+  --light-sea: #ffc247;
+}
+[data-light='red'] {
+  --light: #c8321f;
+  --lamp: #d23a26;
+  --lamp-ink: #fff;
+  --light-sea: #ff8672;
+}
+[data-light='gray'] {
+  --light: #55626f;
+  --lamp: #6b7885;
+  --lamp-ink: #fff;
+  --light-sea: #b4c0cc;
+}
+[data-light='blue'] {
+  --light: #1a66c2;
+  --lamp: #1f73d6;
+  --lamp-ink: #fff;
+  --light-sea: #86c4ff;
+}
+[data-light='error'] {
+  --light: var(--ink);
+  --lamp: var(--graphite);
+  --lamp-ink: #fff;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --gutter: 24px;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 16px;
+  -webkit-text-size-adjust: 100%;
+  background: var(--sea);
+}
+
+body {
+  margin: 0;
+  background: var(--fog);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px #fff;
+  border-radius: 6px;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.wrap-narrow {
+  max-width: 780px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.8125em;
+  letter-spacing: 0.02em;
+}
+
+/* Field labels, the way a ticket prints them. */
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--graphite);
+}
+
+/* IATA and county codes. */
+.code {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.25em;
+  line-height: 1;
+  letter-spacing: 0.03em;
+}
+
+.empty {
+  padding: 28px 20px;
+  border: 1.5px dashed var(--line);
+  border-radius: 14px;
+  color: var(--graphite);
+  text-align: center;
+}
+
+.tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  vertical-align: 2px;
+  white-space: nowrap;
+}
+
+/* Buttons. Hover feedback is an overlay's opacity, so nothing repaints while it fades. */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1.5px solid var(--ink);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.16s var(--ease);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.16s var(--ease);
+  pointer-events: none;
+}
+
+.btn:hover::after {
+  opacity: 0.09;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btn:disabled::after {
+  opacity: 0;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: #fff;
+}
+
+.btn-primary:hover::after {
+  opacity: 0.16;
+}
+
+.btn-on-sea {
+  border-color: #fff;
+  background: #fff;
+  color: var(--ink);
+}
+
+.btn-large {
+  min-height: 56px;
+  padding-inline: 28px;
+  font-size: 17px;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Said next to a download that is not ready yet; while empty it takes no room in a row. */
+.csv-note {
+  align-self: center;
+  font-size: 13px;
+}
+
+.csv-note:empty {
+  position: absolute;
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-block: -6px;
+  padding: 0 4px;
+  color: var(--graphite);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  color: var(--ink);
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: inherit;
+  cursor: pointer;
+}
+
+.more-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-top: 16px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+
+/* Status light: disc + word. */
+
+.lamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--light);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.lamp-disc {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--lamp);
+  color: var(--lamp-ink);
+}
+
+/* Header */
+
+.site-header {
+  position: relative;
+  z-index: 3;
+  background: var(--sea);
+  color: #fff;
+}
+
+/*
+ * A page that opens with the hero lets the header float on the hero's own sea, so the chart can
+ * run up behind it and fade out there instead of being cut by a band of the same colour.
+ */
+body:has(main > .hero:first-child) .site-header {
+  position: absolute;
+  inset: 0 0 auto;
+  background: transparent;
+}
+
+/* Room for the header floating above (its row is 60 px tall). */
+main > .hero:first-child {
+  padding-top: 60px;
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+}
+
+.skip {
+  position: absolute;
+  left: 12px;
+  top: -80px;
+  z-index: 10;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.skip:focus {
+  top: 8px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.logo-mark {
+  flex: none;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.brand-name {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--on-sea-soft);
+}
+
+.brand-zh {
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.site-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 10px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.site-nav a:hover,
+.site-nav a[aria-current='page'] {
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 6px;
+}
+
+.site-nav .nav-stats {
+  display: none;
+}
+
+.site-nav .lang-switch {
+  position: relative;
+  min-height: 36px;
+  margin-left: 6px;
+  padding: 0 14px;
+  border: 1.5px solid rgb(255 255 255 / 0.5);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+/* The box stays compact; the tap area still reaches 44 px. */
+.site-nav .lang-switch::before {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
+.site-nav .lang-switch:hover {
+  border-color: #fff;
+  text-decoration: none;
+}
+
+@media (min-width: 520px) {
+  .site-nav .nav-stats {
+    display: inline-flex;
+  }
+}
+
+/* Hero: one sea-coloured band. The chart has no frame; land fades into the band. */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  /* clip, unlike hidden, leaves position: sticky inside the hero working. */
+  overflow: clip;
+  background: var(--sea);
+  color: #fff;
+}
+
+/*
+ * Headline, chart, pass. Every part has a fixed size, so the band is exactly as tall while
+ * measuring as it is with any result, in any state.
+ */
+.hero-inner {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 16px;
+}
+
+/* The headline stays on top of the map, which runs behind it. */
+.hero-says {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-chart {
+  /* Pulled up into the headline's spare water; the route itself starts below the overlap. */
+  --overlap: 24px;
+  /*
+   * The map alone reaches further up, behind the headline block's empty lower part, so it
+   * starts right under the text instead of after a band of plain sea.
+   */
+  --backdrop: 40px;
+  margin: calc(-1 * (var(--overlap) + var(--backdrop))) calc(var(--gutter) * -1) 0;
+}
+
+/*
+ * As tall as the phone allows while the route row and both figures stay on the first screen
+ * (844 px): the map gets the headline's height to spare, which English needs for itself.
+ */
+.chart {
+  height: calc(62.5vw + 140px + var(--backdrop));
+  /* Where the route may sit: clear of the headline above and of the pass riding up below. */
+  --fx0: 16px;
+  --fx1: calc(100cqw - 16px);
+  --fy0: calc(var(--overlap) + var(--backdrop));
+  --fy1: calc(100cqh - 34px);
+}
+
+:lang(en) .chart {
+  height: calc(62.5vw + 92px + var(--backdrop));
+}
+
+.hero-pass {
+  position: relative;
+  /* The pass rides up over the chart's faded bottom edge. */
+  margin-top: -34px;
+}
+
+/*
+ * The headline sits on the sea in a block sized for the longest verdict. A shorter one leaves
+ * spare water above the chart, which is invisible; text is cut rather than allowed to grow.
+ */
+.hero {
+  --says-h: 150px;
+}
+
+:lang(en) .hero {
+  --says-h: 196px;
+}
+
+.says {
+  height: var(--says-h);
+  padding-top: 10px;
+  overflow: hidden;
+}
+
+.says-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.says-sub {
+  margin: 6px 0 0;
+  color: var(--on-sea-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.says .swap {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  text-wrap: balance;
+}
+
+.says-sub .swap {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  text-wrap: pretty;
+}
+
+.says[data-still] .swap {
+  animation: none;
+}
+
+/* English runs longer: the same sentences need an extra line each on a phone. */
+:lang(en) .hero-chart {
+  --overlap: 40px;
+}
+
+:lang(en) .says-title {
+  font-size: 22px;
+}
+
+:lang(en) .says-title .swap {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+:lang(en) .says-sub .swap {
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+@media (min-width: 960px) {
+  /* Headline top left, pass on the right; the chart is the band's backdrop behind both. */
+  .hero-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+    align-items: start;
+    column-gap: 40px;
+    padding-block: 20px 40px;
+  }
+
+  .hero-says {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  /* Positioned against the hero itself, so it can run off the left edge of the screen. */
+  .hero-chart {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+
+  /*
+   * The route sits in the water left uncovered: under the headline, left of the pass. The map
+   * around it reaches about four fifths of the way across and fades out under the pass.
+   */
+  .chart,
+  :lang(en) .chart {
+    --wrap: max(var(--gutter), (100cqw - 1200px) / 2 + var(--gutter));
+    /* Room for a landing marker's ring at the very edge, where a narrow window puts the wrap. */
+    --fx0: max(var(--wrap) / 2, 24px);
+    --fx1: calc(100cqw - var(--wrap) - 480px - 40px);
+    /* The box starts at the top of the page: header row, padding, headline. */
+    --fy0: calc(60px + 20px + var(--says-h) + 12px);
+    --fy1: calc(100cqh - 40px);
+    height: 100%;
+  }
+
+  /*
+   * The pass sits in the middle of the band, wherever the result lands. What goes under it
+   * (switch and note slot) may hang into the bottom padding, and as much room is kept above
+   * the pass as below it, so the middle stays the middle.
+   */
+  .hero-pass {
+    --hang: calc(10px + 44px + 4.5 * 13px - 40px);
+    z-index: 1;
+    grid-column: 2;
+    grid-row: 1 / -1;
+    display: grid;
+    grid-template-rows: minmax(var(--hang), 1fr) auto minmax(var(--hang), 1fr);
+    align-self: stretch;
+    margin-top: 0;
+  }
+
+  :lang(en) .hero-pass {
+    --hang: calc(10px + 44px + 6 * 13px - 40px);
+  }
+
+  .hero-pass > .pass {
+    grid-row: 2;
+  }
+
+  .hero-pass > .contribute {
+    grid-row: 3;
+    align-self: start;
+    margin-bottom: -40px;
+  }
+}
+
+/* The headline only grows once its column is wide enough to keep the same number of lines. */
+@media (min-width: 1200px) {
+  .hero {
+    --says-h: 144px;
+  }
+
+  :lang(en) .hero {
+    --says-h: 168px;
+  }
+
+  .says-title {
+    font-size: 30px;
+    line-height: 1.25;
+  }
+
+  .says-sub {
+    max-width: 38em;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .says-sub .swap {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  :lang(en) .says-title {
+    font-size: 30px;
+  }
+
+  :lang(en) .says-title .swap {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  :lang(en) .says-sub .swap {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+}
+
+/* Route chart */
+
+.chart {
+  position: relative;
+  margin: 0;
+  container-type: size;
+  /* A picture, not a control: nothing in it can be dragged, selected or clicked. */
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  /*
+   * How the box fades into the band (the base map only; markers and labels stay crisp): an
+   * outline and an edge, intersected. On a phone the sides are the screen's own edges.
+   */
+  --fade-shape: linear-gradient(#000, #000);
+  /* A short fade right under the headline, so the map starts where the text ends. */
+  --fade-edge: linear-gradient(to bottom, transparent, #000 40px, #000 74%, transparent 98%);
+  /* Where the route's safe area sits in the free part: 0 at its top, 0.5 in its middle. */
+  --align: 0;
+}
+
+/*
+ * One framing of the map with its route; when the framing changes, two scenes cross-fade. The
+ * scene is the map's frame (1600 × 1000 units), scaled so its safe area — where views put the
+ * route's ends — fills the free part of the box (--fx0…--fy1) as far as the tighter side allows,
+ * centred across it and placed down it by --align. Pure CSS, so a page rendered on the server
+ * is framed before any script runs.
+ */
+.scene {
+  --sw0: min((var(--fx1) - var(--fx0)) * 1600 / 1420, (var(--fy1) - var(--fy0)) * 2);
+  /* --zoom (inline, flat world maps only) scales the frame around the safe area's centre. */
+  --sw: calc(var(--sw0) * var(--zoom, 1));
+  /* Where the safe area's centre (510 units down the frame) lands, set by the unzoomed frame. */
+  --cy: calc(var(--fy0) + (var(--fy1) - var(--fy0) - var(--sw0) / 2) * var(--align) + var(--sw0) / 4);
+  --sl: calc((var(--fx0) + var(--fx1)) / 2 - var(--sw) / 2);
+  --st: calc(var(--cy) - var(--sw) * 510 / 1600);
+  position: absolute;
+  left: var(--sl);
+  top: var(--st);
+  width: var(--sw);
+  aspect-ratio: 16 / 10;
+  animation: fade-in 0.5s var(--ease) both;
+}
+
+.scene[data-leaving] {
+  animation: fade-out 0.45s var(--ease) both;
+}
+
+.chart-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * The drawn canvas reaches past the frame (its offset comes inline as --cx/--cy). The fades
+ * belong to the chart box, not to this image, so they are positioned back onto the box; a
+ * second pair softens the canvas's own edges where a small framing leaves them in view.
+ */
+.chart-base {
+  -webkit-user-drag: none;
+  position: absolute;
+  left: calc(var(--cx) * 100%);
+  top: calc(var(--cy) * 100%);
+  max-width: none;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+  --box: calc(-1 * (var(--sl) + var(--cx) * var(--sw))) calc(-1 * (var(--st) + var(--cy) * var(--sw) * 10 / 16));
+  -webkit-mask-image:
+    var(--fade-shape), var(--fade-edge), linear-gradient(to right, transparent, #000 4%, #000 96%, transparent),
+    linear-gradient(to bottom, transparent, #000 4%, #000 96%, transparent);
+  -webkit-mask-size: 100cqw 100cqh, 100cqw 100cqh, 100% 100%, 100% 100%;
+  -webkit-mask-position: var(--box), var(--box), 0 0, 0 0;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-composite: source-in;
+  mask-image:
+    var(--fade-shape), var(--fade-edge), linear-gradient(to right, transparent, #000 4%, #000 96%, transparent),
+    linear-gradient(to bottom, transparent, #000 4%, #000 96%, transparent);
+  mask-size: 100cqw 100cqh, 100cqw 100cqh, 100% 100%, 100% 100%;
+  mask-position: var(--box), var(--box), 0 0, 0 0;
+  mask-repeat: no-repeat;
+  mask-composite: intersect;
+}
+
+.chart-base[data-ready] {
+  opacity: 1;
+}
+
+@media (min-width: 960px) {
+  /*
+   * The chart runs off the left edge of the screen and dissolves under the pass. An ellipse,
+   * not two straight fades, so no corner is cut square; the band's top (behind the header) and
+   * bottom edges are straight, so straight fades meet them.
+   */
+  .chart {
+    --fade-shape: radial-gradient(ellipse 62% 72% at 32% 60%, #000 45%, transparent 100%);
+    --fade-edge: linear-gradient(to bottom, transparent, #000 14%, #000 72%, transparent 96%);
+    --align: 0.5;
+  }
+}
+
+.chart-lines {
+  overflow: visible;
+}
+
+/* Widths are in map units (1600 wide): about 2.5 px on a phone, 3 px on a desktop. */
+.chart-route,
+.chart-tint {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 10;
+}
+
+.chart-route {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+/* The same track in the light's colour, faded in over the white one. */
+.chart-tint {
+  stroke: var(--light-sea);
+  opacity: 0;
+}
+
+@media (min-width: 640px) {
+  .chart-route,
+  .chart-tint {
+    stroke-width: 6;
+  }
+}
+
+.scene[data-phase='tracing'] .chart-route {
+  animation: draw 2.3s var(--ease-travel) both;
+}
+
+.scene[data-phase='landed'] .chart-route {
+  stroke-dashoffset: 0;
+}
+
+/* A hop we could not draw early (the origin was unknown) is drawn as part of the reveal. */
+.scene[data-phase='landed']:not([data-early]) .chart-route {
+  animation: draw 0.7s var(--ease) both;
+}
+
+.scene[data-phase='landed'] .chart-tint {
+  animation: fade-in 0.5s var(--ease) 0.1s both;
+}
+
+.scene[data-phase='landed']:not([data-early]) .chart-tint {
+  animation-delay: 0.7s;
+}
+
+.chart-origin,
+.chart-dest {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.chart-origin {
+  width: 10px;
+  height: 10px;
+  margin: -5px;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.28);
+  animation: fade-in 0.4s var(--ease) both;
+}
+
+.chart-dest {
+  width: 22px;
+  height: 22px;
+  margin: -11px;
+  opacity: 0;
+}
+
+.chart-dest i {
+  position: absolute;
+  inset: 0;
+  border: 2.5px solid var(--light-sea);
+  border-radius: 50%;
+}
+
+.chart-dest i::after {
+  content: '';
+  position: absolute;
+  inset: 4.5px;
+  border-radius: 50%;
+  background: var(--light-sea);
+}
+
+/* While only the landing point is known, it breathes quietly. */
+.scene[data-phase='tracing']:not([data-early]) .chart-dest {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.scene[data-phase='landed'] .chart-dest {
+  animation: settle 0.36s var(--ease) both;
+}
+
+.scene[data-phase='landed']:not([data-early]) .chart-dest {
+  animation-delay: 0.5s;
+}
+
+.chart-label {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  transform: translate(-50%, 15px);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 0 6px var(--sea), 0 0 2px var(--sea);
+}
+
+.chart-label[data-anchor='start'] {
+  transform: translate(-6px, 15px);
+  text-align: left;
+}
+
+.chart-label[data-anchor='end'] {
+  transform: translate(calc(-100% + 6px), 15px);
+  text-align: right;
+}
+
+.chart-label[data-above] {
+  transform: translate(-50%, calc(-100% - 15px));
+}
+
+.chart-label b {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--light-sea);
+}
+
+.scene[data-phase='landed'] .chart-label {
+  animation: fade-in 0.4s var(--ease) 0.25s both;
+}
+
+.scene[data-phase='landed']:not([data-early]) .chart-label {
+  animation-delay: 0.7s;
+}
+
+@media (min-width: 960px) {
+  .chart-label {
+    font-size: 14px;
+  }
+  .chart-label b {
+    font-size: 34px;
+  }
+  .chart-origin {
+    width: 12px;
+    height: 12px;
+    margin: -6px;
+  }
+  .chart-dest {
+    width: 26px;
+    height: 26px;
+    margin: -13px;
+  }
+  .chart-dest i::after {
+    inset: 5.5px;
+  }
+}
+
+/* Boarding pass */
+
+.pass {
+  position: relative;
+  padding: 18px 20px 20px;
+  border-radius: 18px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.pass-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 32px;
+}
+
+.swap {
+  display: inline-block;
+  animation: swap-in 0.26s var(--ease) both;
+}
+
+/*
+ * Label / code / place for each end, with the track between the codes. The columns have fixed
+ * sizes and each end's children sit straight on this grid, so a code or a place name arriving
+ * mid-test never moves or resizes the track.
+ */
+.pass-route {
+  display: grid;
+  grid-template-columns: minmax(0, 116px) minmax(18px, 1fr) minmax(18px, 1fr) minmax(0, 116px);
+  column-gap: 12px;
+  margin-top: 14px;
+}
+
+.pass-end {
+  display: contents;
+}
+
+.pass-end-to {
+  text-align: right;
+}
+
+.pass-end > .label {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.pass-end > .pass-code {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+.pass-end > .pass-place {
+  grid-row: 3;
+  grid-column: 1 / span 2;
+}
+
+.pass-end-to > .label,
+.pass-end-to > .pass-code {
+  grid-column: 4;
+}
+
+.pass-end-to > .pass-place {
+  grid-column: 3 / span 2;
+}
+
+.pass-code {
+  display: flex;
+  height: 54px;
+  /* Clips the rising letters at the baseline, but never cuts a wide code short. */
+  overflow-x: visible;
+  overflow-y: clip;
+  font-family: var(--font-display);
+  font-size: clamp(48px, 14.4vw, 56px);
+  font-weight: 800;
+  line-height: 54px;
+  letter-spacing: 0.02em;
+}
+
+.pass-end-to > .pass-code {
+  justify-content: flex-end;
+}
+
+.pass-code[data-empty] {
+  color: var(--line);
+}
+
+.pass-code-to {
+  color: var(--light-big, var(--light));
+}
+
+.pass[data-phase='measuring'] .pass-code-to {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.rise {
+  display: inline-block;
+  animation: rise 0.44s var(--ease) both;
+}
+
+/* One line, always: a long name is cut short rather than pushing the figures down. */
+.pass-place {
+  height: 18px;
+  overflow: hidden;
+  color: var(--graphite);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pass-end .label {
+  white-space: nowrap;
+}
+
+/* English place names run long ("Los Angeles · United States") and get two lines on a phone. */
+@media (max-width: 439px) {
+  :lang(en) .pass-place {
+    height: 36px;
+    text-wrap: balance;
+    white-space: normal;
+  }
+  :lang(en) .brand-zh {
+    display: none;
+  }
+  :lang(en) .brand-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+  }
+}
+
+.pass-track {
+  position: relative;
+  grid-row: 2;
+  grid-column: 2 / span 2;
+  height: 54px;
+  margin-inline: 6px;
+}
+
+.pass-track-line,
+.pass-track-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--line);
+}
+
+.pass-track-fill {
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.pass-plane {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 0;
+  transform: translateX(0);
+}
+
+.pass-plane svg {
+  position: absolute;
+  left: -9px;
+  top: -9px;
+  background: var(--paper);
+  border-radius: 50%;
+}
+
+.pass[data-phase='measuring'] .pass-track-fill {
+  animation: track-fill 2.6s var(--ease-travel) both;
+}
+
+.pass[data-phase='measuring'] .pass-plane {
+  animation: track-fly 2.6s var(--ease-travel) both;
+}
+
+.pass[data-phase='done'] .pass-track-fill {
+  transform: scaleX(1);
+  background: var(--lamp);
+}
+
+.pass[data-phase='done'] .pass-plane {
+  transform: translateX(100%);
+  color: var(--light);
+}
+
+.pass[data-phase='error'] .pass-plane {
+  opacity: 0.3;
+}
+
+.pass-figures {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 20px;
+  margin: 16px 0 0;
+}
+
+.figure {
+  min-width: 0;
+}
+
+.figure dd {
+  display: flex;
+  flex-direction: column;
+  margin: 2px 0 0;
+}
+
+.figure-value {
+  font-family: var(--font-display);
+  font-size: clamp(52px, 16.4vw, 64px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 0.98;
+  white-space: nowrap;
+}
+
+.figure-value[data-empty] {
+  color: var(--line);
+}
+
+.figure-unit {
+  flex: none;
+  color: var(--graphite);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+@media (min-width: 440px) {
+  .pass {
+    padding: 22px 26px 24px;
+  }
+  .figure dd {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .figure-value {
+    font-size: 72px;
+  }
+  .figure-unit {
+    font-size: 15px;
+  }
+}
+
+.pass[data-phase='done'] .figure-value {
+  animation: rise 0.5s var(--ease) 0.3s both;
+}
+
+.pass[data-phase='done'] .figure + .figure .figure-value {
+  animation-delay: 0.38s;
+}
+
+/* The perforation: notches take the colour of the band behind the pass. */
+.pass-tear {
+  position: relative;
+  margin: 18px -20px 14px;
+  border-top: 2px dashed var(--line);
+}
+
+.pass-tear::before,
+.pass-tear::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--sea);
+}
+
+.pass-tear::before {
+  left: -9px;
+}
+
+.pass-tear::after {
+  right: -9px;
+}
+
+@media (min-width: 440px) {
+  .pass-tear {
+    margin-inline: -26px;
+  }
+}
+
+.pass-stub {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* The second row is one label + one line of value, whatever the facts are. */
+  grid-template-rows: auto calc(11px * 1.45 + 15px * 1.4);
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.stub-wide {
+  grid-column: 1 / -1;
+}
+
+/* Every value keeps to its line (an unknown network shows its long registry name). */
+.pass-stub dd {
+  margin: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pass-stub .label,
+.figure .label {
+  white-space: nowrap;
+}
+
+
+.stub-asn {
+  margin-left: 8px;
+  color: var(--graphite);
+  /* The mono face must not make this line taller than the "—" it replaces. */
+  line-height: 1;
+}
+
+.pass[data-phase='done'] .pass-stub dd,
+.pass[data-phase='done'] .pass-actions {
+  animation: fade-in 0.36s var(--ease) 0.48s both;
+}
+
+/* One row of a set height, with or without buttons in it; a long label wraps inside its button. */
+.pass-actions {
+  display: flex;
+  gap: 8px;
+  height: 48px;
+  margin-top: 18px;
+}
+
+.pass-actions .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 10px;
+}
+
+/* A shared or finished-on-arrival pass shows its final state at once. */
+.pass[data-still] *,
+.scene[data-still],
+.scene[data-still] * {
+  animation: none !important;
+}
+
+.scene[data-still] .chart-tint,
+.scene[data-still] .chart-dest {
+  opacity: 1;
+}
+
+.noscript-note {
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+
+/* Contribute switch, on the sea */
+
+.contribute {
+  margin-top: 10px;
+}
+
+/* Why a test is shown but not counted. The room for it is always there, used or not. */
+.hero-note {
+  height: 4.5em;
+  margin: 0;
+  overflow: hidden;
+  color: var(--on-sea-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+:lang(en) .hero-note {
+  height: 6em;
+}
+
+.hero-note .swap {
+  display: block;
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.switch-track {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border: 1.5px solid #fff;
+  border-radius: 13px;
+}
+
+.switch-track::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease);
+}
+
+.switch-thumb {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s var(--ease);
+}
+
+.switch-thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--sea);
+  opacity: 0;
+  transition: opacity 0.2s var(--ease);
+}
+
+.switch[aria-checked='true'] .switch-track::before,
+.switch[aria-checked='true'] .switch-thumb::after {
+  opacity: 1;
+}
+
+.switch[aria-checked='true'] .switch-thumb {
+  transform: translateX(18px);
+}
+
+/* Sections below the hero */
+
+.section {
+  padding-block: 48px;
+  /* Off-screen sections skip layout and paint, so the reveal only pays for the hero. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 640px;
+}
+
+.section-paper {
+  background: var(--paper);
+}
+
+.section-head {
+  margin-bottom: 24px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.section-head p {
+  margin: 6px 0 0;
+  max-width: 44em;
+  color: var(--graphite);
+}
+
+.section-head .ask {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+@media (min-width: 960px) {
+  .section {
+    padding-block: 72px;
+  }
+  .section-head h2 {
+    font-size: 30px;
+  }
+}
+
+/* Tables and the per-ISP board */
+
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+}
+
+.board {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.board thead th {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--fog);
+  color: var(--graphite);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.board tbody th,
+.board td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.board tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.board tbody th {
+  font-weight: 700;
+  /* A carrier or county name breaks at a space, never in the middle of the name. */
+  word-break: keep-all;
+}
+
+@media (min-width: 640px) {
+  .board tbody th {
+    white-space: nowrap;
+  }
+}
+
+.board tbody th .code {
+  display: inline-block;
+  min-width: 2.6em;
+}
+
+.board .num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.board thead .num {
+  font-size: 11px;
+}
+
+.board-dest {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.board-dest-share {
+  color: var(--graphite);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.col-share {
+  white-space: nowrap;
+}
+
+.board-pct {
+  display: inline-block;
+  min-width: 2.3em;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.lightbar,
+.sharebar {
+  display: inline-flex;
+  width: 96px;
+  height: 8px;
+  margin-left: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  vertical-align: 1px;
+}
+
+.lightbar {
+  gap: 2px;
+}
+
+.lightbar span {
+  background: var(--lamp);
+}
+
+.sharebar {
+  background: var(--line-soft);
+}
+
+.sharebar span {
+  width: 100%;
+  background: var(--lamp);
+  transform-origin: left;
+}
+
+[data-low] {
+  color: var(--graphite);
+}
+
+[data-low] .lightbar,
+[data-low] .sharebar,
+[data-low] .lamp-disc {
+  opacity: 0.45;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--graphite);
+  font-size: 13px;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--lamp);
+}
+
+
+/* On a phone the home board stacks each ISP into two lines instead of scrolling sideways. */
+@media (max-width: 639px) {
+  .board-compact thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .board-compact .board-dest {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+  .board-compact tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .board-compact tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .board-compact tbody th,
+  .board-compact td {
+    padding: 0;
+    border: 0;
+  }
+  .board-compact .lightbar {
+    width: 64px;
+  }
+}
+
+/*
+ * Why: four steps in order. Steps 1–3 are a heading, the picture that shows it
+ * and their text; step 4 lists what the detour costs.
+ */
+
+.why-steps {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: why;
+}
+
+.why-step {
+  display: grid;
+  grid-template-areas: 'head' 'art' 'text';
+  gap: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--paper);
+  counter-increment: why;
+}
+
+.why-step h3 {
+  grid-area: head;
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+
+.why-step h3::before {
+  content: counter(why);
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--graphite);
+}
+
+.why-text {
+  grid-area: text;
+  color: var(--graphite);
+  font-size: 15px;
+}
+
+.why-text p {
+  margin: 0;
+}
+
+.why-text p + p {
+  margin-top: 10px;
+}
+
+/* The turn of step 2 into step 3: set apart, in ink. */
+.why-text .why-but {
+  margin-top: 16px;
+  padding-left: 14px;
+  border-left: 3px solid var(--ink);
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+/* Step 4 is a list of its own, not a picture beside a paragraph. */
+.why-step-wide {
+  grid-template-areas: 'head' 'costs';
+}
+
+.costs {
+  display: grid;
+  grid-area: costs;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cost {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-content: start;
+  column-gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--fog);
+}
+
+.cost h4 {
+  grid-column: 2;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.cost p {
+  grid-column: 2;
+  margin: 6px 0 0;
+  color: var(--graphite);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.cost-icon {
+  grid-row: 1 / span 2;
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (min-width: 640px) {
+  .costs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1000px) {
+  .costs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.why-art {
+  grid-area: art;
+  min-width: 0;
+}
+
+@media (min-width: 860px) {
+  .why-steps {
+    gap: 20px;
+  }
+  .why-step {
+    grid-template-areas: 'head art' 'text art';
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 48px;
+    row-gap: 10px;
+    padding: 36px;
+  }
+  .why-step h3 {
+    align-self: end;
+    font-size: 22px;
+  }
+  .why-art {
+    align-self: center;
+  }
+  .why-step-wide {
+    grid-template-areas: 'head head' 'costs costs';
+    row-gap: 20px;
+  }
+}
+
+/*
+ * The pictures. Drawn 320 units wide, about one unit to the pixel on a phone, so the lettering
+ * inside them is the size it says.
+ */
+.pic {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  overflow: visible;
+}
+
+.pic-shape {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.pic-back {
+  fill: var(--paper);
+}
+
+.pic-detail,
+.pic-cross {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pic-dot {
+  fill: var(--ink);
+}
+
+/* The data center that answers, in the colour of the outcome. */
+.pic-site[data-on] .pic-shape {
+  fill: var(--ink);
+}
+
+.pic[data-light] .pic-site[data-on] .pic-shape {
+  fill: var(--lamp);
+  stroke: var(--lamp);
+}
+
+.pic-site[data-on] .pic-detail {
+  stroke: #fff;
+}
+
+.pic-dim,
+.pic-site[data-dim] {
+  opacity: 0.3;
+}
+
+.pic-text {
+  fill: var(--ink);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pic-note {
+  fill: var(--graphite);
+  font-weight: 500;
+}
+
+.pic[data-light] .pic-mark {
+  fill: var(--light);
+  font-weight: 700;
+}
+
+.pic-route {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+}
+
+.pic[data-light] .pic-route {
+  stroke: var(--lamp);
+}
+
+.pic-far,
+.pic-leader,
+.pic-waves {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.pic-far {
+  stroke-dasharray: 2 6;
+}
+
+.pic-leader {
+  stroke-width: 1.2;
+  stroke-dasharray: 2 4;
+}
+
+.pic-join {
+  fill: var(--paper);
+  stroke: var(--lamp);
+  stroke-width: 2.4;
+}
+
+.pic-cross {
+  stroke: var(--lamp);
+  stroke-width: 2.4;
+}
+
+/* A zero-length dash with round caps is a dot; its offset carries it along the route. */
+.pic-packet path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-dasharray: 0 2;
+}
+
+.pic-packet .pic-packet-halo {
+  stroke: var(--paper);
+  stroke-width: 14;
+}
+
+/* The same website over two paths, drawn on one layout so only the route differs. */
+.lane + .lane {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.lane-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  margin: 0 0 10px;
+  color: var(--graphite);
+  font-size: 14px;
+}
+
+.lane-head b {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.lane-head small {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/*
+ * The pictures are complete without script. With it, each step is held back until it scrolls
+ * into view (data-seen, once): the route draws, what it reaches appears, then a packet runs it
+ * there and back, only while the step is on screen (data-live).
+ */
+.why-step[data-armed]:not([data-seen]) .pic-route {
+  stroke-dashoffset: 1;
+}
+
+.why-step[data-armed]:not([data-seen]) :is(.pic-packet, .pic-pop, .pic-mark, .pic-join, .pic-cross) {
+  opacity: 0;
+}
+
+.why-step[data-seen] .pic-route {
+  animation: draw 0.7s var(--ease-travel) both;
+}
+
+.why-step[data-seen] .pic[data-light='red'] .pic-route {
+  animation-duration: 1.3s;
+}
+
+.why-step[data-seen] :is(.pic-pop, .pic-mark, .pic-join, .pic-cross) {
+  animation: fade-in 0.3s var(--ease) 0.7s both;
+}
+
+.why-step[data-seen] .pic[data-light='red'] :is(.pic-pop, .pic-mark, .pic-join) {
+  animation-delay: 1.3s;
+}
+
+.why-step[data-seen] .pic-packet {
+  animation: fade-in 0.3s var(--ease) 1.5s both;
+}
+
+/* One leg of the trip per run, then the packet turns back. --lag (in legs) staggers packets. */
+.why-step[data-seen] .pic-packet path {
+  animation: packet var(--leg) linear calc(1.5s + var(--leg) * var(--lag, 0)) infinite alternate both;
+  animation-play-state: paused;
+}
+
+/*
+ * Part 2: many requests into Cloudflare, few on to the website. The occasional trip takes three
+ * legs of the lanes (three lanes, so about one request in four or five) and leaves as the first
+ * lane's request arrives. Longhands, so the play state still follows data-live.
+ */
+.why-step[data-seen] .pic-packet-rare path {
+  animation-name: packet-rare;
+  animation-duration: calc(var(--leg) * 3);
+  animation-delay: calc(1.5s + var(--leg) * 0.22);
+  animation-direction: normal;
+}
+
+.pic-many .pic-route {
+  stroke-width: 2;
+}
+
+.pic-many .pic-route-thin {
+  stroke-width: 1.2;
+}
+
+.pic-many .pic-packet path {
+  stroke-width: 6;
+}
+
+.pic-many .pic-packet .pic-packet-halo {
+  stroke-width: 9;
+}
+
+.why-step[data-live] .pic-packet path {
+  animation-play-state: running;
+}
+
+/* Standing still, the packet waits at the far end of its route. */
+@media (prefers-reduced-motion: reduce) {
+  .pic-packet path {
+    stroke-dashoffset: -1;
+  }
+}
+
+/* What you can do */
+
+.act-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.act-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--fog);
+}
+
+.act-item h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.act-item > .btn-row {
+  margin-top: auto;
+}
+
+.act-item .template {
+  /* Letters in one row share a height, so their buttons line up. */
+  flex: 1 0 auto;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.7;
+  /* There is no copy button: one tap or click selects the whole message, ready to copy. */
+  -webkit-user-select: all;
+  user-select: all;
+}
+
+.act-item .template[data-empty] {
+  color: var(--graphite);
+}
+
+.act-item .btn-row .btn {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 1000px) {
+  .act-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+
+/* Footer */
+
+.site-footer {
+  /* The last nav link's 44 px target already adds air under its text, hence less at the bottom. */
+  padding-block: 48px 36px;
+  /* Keeps the footer apart from a sea-coloured hero right above it. */
+  border-top: 1px solid rgb(255 255 255 / 0.16);
+  background: var(--sea);
+  color: var(--on-sea-soft);
+  font-size: 14px;
+  text-align: center;
+}
+
+.site-footer nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.site-footer nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: #fff;
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
+
+/* With room to spare, the links read as one line instead of a column. */
+@media (min-width: 860px) {
+  .site-footer nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: 32px;
+  }
+}
+
+/* Language suggestion: floats, so it never moves the page. */
+
+.lang-banner {
+  position: fixed;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 4px 12px;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 6px 6px 6px 16px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 14px;
+  transform: translateX(-50%);
+  animation: banner-in 0.3s var(--ease) 0.6s both;
+}
+
+.lang-banner p {
+  margin: 0;
+}
+
+.lang-banner a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-underline-offset: 4px;
+}
+
+.lang-banner :focus-visible {
+  outline-color: #fff;
+  box-shadow: none;
+}
+
+/* Sub-page title band */
+
+.band {
+  padding-block: 20px 40px;
+  background: var(--sea);
+  color: #fff;
+}
+
+.band .label {
+  margin: 0;
+  color: var(--on-sea-soft);
+}
+
+.band h1 {
+  max-width: 24em;
+  margin: 6px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.band-lead {
+  max-width: 44em;
+  margin: 12px 0 0;
+  color: var(--on-sea-soft);
+}
+
+.band-meta {
+  margin: 14px 0 0;
+  color: var(--on-sea-soft);
+  font-size: 12px;
+}
+
+@media (min-width: 960px) {
+  .band {
+    padding-block: 36px 56px;
+  }
+  .band h1 {
+    max-width: 28em;
+    font-size: 40px;
+  }
+}
+
+/* Report */
+
+.report {
+  padding-block: 32px 72px;
+}
+
+.report-section {
+  margin-top: 56px;
+}
+
+.report > .report-section:first-child {
+  margin-top: 8px;
+}
+
+.report-section h2 {
+  margin: 0 0 16px;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+
+.points {
+  max-width: 46em;
+  margin: 0 0 20px;
+  padding-left: 1.2em;
+  list-style: disc;
+}
+
+.points li {
+  margin-top: 8px;
+}
+
+.dist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 14px;
+}
+
+.dist {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+}
+
+.dist h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.dist ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dist li {
+  display: grid;
+  grid-template-columns: 2.4em minmax(0, 1fr) auto 2.8em;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.dist-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dist .sharebar {
+  width: 72px;
+  margin: 0;
+}
+
+.dist-pct {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+}
+
+.trend {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+}
+
+.trend > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.trend-grid {
+  stroke: var(--line-soft);
+}
+
+.trend-tick {
+  fill: var(--graphite);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.trend-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+
+.trend-line[data-rank='1'] {
+  stroke: #1a66c2;
+}
+.trend-line[data-rank='2'] {
+  stroke: #51616f;
+}
+.trend-line[data-rank='3'] {
+  stroke: #0e3b63;
+}
+.trend-line[data-rank='4'] {
+  stroke: #7e8c99;
+}
+.trend-line[data-rank='5'] {
+  stroke: #3d86d9;
+}
+
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.trend-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trend-legend b {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+/* Methodology */
+
+.method {
+  display: grid;
+  gap: 24px;
+  padding-block: 24px 72px;
+}
+
+.toc {
+  display: flex;
+  gap: 8px;
+  margin-inline: calc(var(--gutter) * -1);
+  padding-inline: var(--gutter);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.toc a {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 22px;
+  background: var(--paper);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.method-body {
+  min-width: 0;
+}
+
+.prose {
+  max-width: 44em;
+  scroll-margin-top: 16px;
+}
+
+.prose + .prose {
+  margin-top: 44px;
+}
+
+.prose-wide {
+  max-width: none;
+}
+
+.prose h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.prose p {
+  margin: 0 0 12px;
+  line-height: 1.85;
+}
+
+.prose .table-scroll {
+  margin-top: 16px;
+}
+
+.search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 16px 0 12px;
+}
+
+.search input {
+  flex: 1 1 260px;
+  max-width: 420px;
+  height: 48px;
+  padding: 0 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: 12px;
+  background: var(--paper);
+  font-size: 16px;
+}
+
+.search span {
+  color: var(--graphite);
+}
+
+.colo-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.colo-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+@media (min-width: 960px) {
+  .method {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 56px;
+    padding-top: 48px;
+  }
+  .toc {
+    position: sticky;
+    top: 24px;
+    flex-direction: column;
+    align-self: start;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .toc a {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--graphite);
+    white-space: normal;
+  }
+  .toc a:hover {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
+/* Missing result or page */
+
+.shared-cta {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.shared-cta p {
+  margin: 0;
+  color: var(--on-sea-soft);
+  font-size: 14px;
+  text-align: center;
+}
+
+.shared-missing {
+  max-width: 560px;
+  padding-block: 56px 96px;
+}
+
+.shared-missing h1 {
+  margin: 6px 0 8px;
+  font-size: 30px;
+  line-height: 1.3;
+}
+
+.shared-missing .label,
+.shared-missing p {
+  color: var(--on-sea-soft);
+}
+
+.shared-missing .shared-cta p {
+  text-align: left;
+}
+
+.shared-missing .btn {
+  justify-self: start;
+}
+
+/* Share sheet */
+
+.sheet {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.sheet[open] {
+  display: grid;
+  align-items: end;
+  justify-items: center;
+}
+
+/* The dialog itself takes focus on open; the ring belongs on its controls, not the whole sheet. */
+.sheet:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.sheet::backdrop {
+  background: rgb(6 22 38 / 0.62);
+  animation: fade-in 0.2s var(--ease) both;
+}
+
+.sheet-body {
+  width: min(100%, 520px);
+  max-height: 94dvh;
+  padding: 10px 20px max(20px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 22px 22px 0 0;
+  background: var(--paper);
+  animation: sheet-in 0.26s var(--ease) both;
+}
+
+.sheet[data-closing] .sheet-body {
+  animation: sheet-out 0.16s var(--ease) both;
+}
+
+.sheet[data-closing]::backdrop {
+  animation: fade-out 0.16s var(--ease) both;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-right: -10px;
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--fog);
+}
+
+.seg button {
+  min-height: 44px;
+  border-radius: 10px;
+  color: var(--graphite);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.seg button[aria-pressed='true'] {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(12 27 42 / 0.16);
+}
+
+.sheet-preview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--fog);
+}
+
+.sheet-preview img {
+  border-radius: 8px;
+  background: var(--sea);
+}
+
+.sheet-preview[data-layout='story'] img {
+  width: auto;
+  height: min(44dvh, 400px);
+}
+
+.sheet-preview[data-layout='wide'] img {
+  width: 100%;
+  height: auto;
+}
+
+.sheet-preview-note {
+  position: absolute;
+  max-width: 16em;
+  margin: 0;
+  color: #fff;
+  font-size: 13px;
+  text-align: center;
+}
+
+.sheet-preview[data-state='loading'] .sheet-preview-note {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.sheet-primary {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sheet-noid {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.sheet-noid p {
+  margin: 0 0 4px;
+  color: var(--graphite);
+  font-size: 15px;
+}
+
+.sheet-text {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--fog);
+  color: var(--graphite);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 720px) {
+  .sheet[open] {
+    align-items: center;
+  }
+  .sheet-body {
+    max-height: min(92dvh, 860px);
+    padding-bottom: 20px;
+    border-radius: 22px;
+  }
+}
+
+/* Motion. Only transform, opacity and stroke-dashoffset animate; one easing, no overshoot. */
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(45%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes packet {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -1;
+  }
+}
+
+/* Waits unseen at Cloudflare, goes to the website and back, fades out where it started. */
+@keyframes packet-rare {
+  0%,
+  26% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  29% {
+    opacity: 1;
+  }
+  63% {
+    stroke-dashoffset: -1;
+  }
+  96% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/* Both fade in as they set off, so a retest restarts them without a visible reset. */
+@keyframes track-fill {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  12% {
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes track-fly {
+  from {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  12% {
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
