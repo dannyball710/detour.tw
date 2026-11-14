@@ -36,3 +36,7 @@ Repository secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `TOKEN_SECR
 
 The `detour.tw` zone must stay on Cloudflare's Free plan: the measurement depends on it being routed like an
 ordinary free-plan site.
+
+## License
+
+Code: [GPL-3.0](LICENSE). Published statistics (`/api/export.csv`): CC BY 4.0.
