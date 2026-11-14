@@ -77,7 +77,6 @@ function SheetContent({ lang, result, onContribute, shared }: Pick<Props, 'lang'
   const files = useRef<Partial<Record<ImageLayout, File>>>({})
   const canNative = typeof navigator.share === 'function'
   const id = result.id
-  const unverified = result.notCountedReason === 'unverified'
   const [copied, setCopied] = useState<'copied' | 'failed' | null>(null)
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(copyTimer.current), [])
@@ -177,10 +176,8 @@ function SheetContent({ lang, result, onContribute, shared }: Pick<Props, 'lang'
 
       {!id && (
         <div className="sheet-noid">
-          {!unverified && <p>{t.noId}</p>}
-          {/* "Share data" was on; turning it on again would not help, so no button for it. */}
-          {unverified && <p>{t.notStored}</p>}
-          {onContribute && !unverified && (
+          <p>{t.noId}</p>
+          {onContribute && (
             <button type="button" className="btn btn-primary" onClick={onContribute}>
               {t.contributeAndShare}
             </button>

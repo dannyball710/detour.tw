@@ -49,7 +49,7 @@
 	"vars": {
 		"SITE_URL": "https://detour.tw"
 	},
-	// TOKEN_SECRET — HMAC key for test tokens and daily IP hashes; TURNSTILE_SECRET — Turnstile siteverify.
-	// Set by CI (--secrets-file); local dev: put both in .dev.vars (Turnstile: Cloudflare's always-pass test secret).
-	"secrets": { "required": ["TOKEN_SECRET", "TURNSTILE_SECRET"] }
+	// TOKEN_SECRET — HMAC key for test tokens and daily IP hashes. Set by CI (--secrets-file);
+	// local dev: put TOKEN_SECRET=... in .dev.vars
+	"secrets": { "required": ["TOKEN_SECRET"] }
 }

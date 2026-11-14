@@ -47,7 +47,6 @@ function body(over: Partial<SubmitRequest> = {}): SubmitRequest {
     contribute: true,
     conn: 'wifi',
     lang: 'zh',
-    turnstile: null,
     ...over,
   }
 }

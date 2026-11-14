@@ -18,7 +18,7 @@ const blueSub = (whose: string) => (pct: number | null) =>
 
 // The privacy note, shown in full on the methodology page (/methodology#privacy).
 const privacy =
-  '我們不儲存你的 IP。為了防止重複送出，會把 IP 與裝置編號加上日期後算出雜湊值，保存 48 小時，之後從資料庫清除，資料庫備份最多再保留 30 天。伺服器的請求日誌是關閉的，日誌裡不會有你的 IP。每次測試只記錄電信公司、縣市、落地節點、延遲、裝置時區與連線類型，用於全台匿名統計。公開下載的只有每日彙整的統計，不含任何單筆測試；同一天同一家電信少於 3 筆的落地機房會合併計算。你可以隨時關閉「共享數據」，關閉時不儲存任何資料。網站字型由 Google Fonts 提供，載入字型時你的瀏覽器會連到 Google。為了不讓自動化程式送出的測試混進統計，我們使用 Cloudflare Turnstile 驗證，它的程式從 challenges.cloudflare.com 載入。'
+  '我們不儲存你的 IP。為了防止重複送出，會把 IP 與裝置編號加上日期後算出雜湊值，保存 48 小時，之後從資料庫清除，資料庫備份最多再保留 30 天。伺服器的請求日誌是關閉的，日誌裡不會有你的 IP。每次測試只記錄電信公司、縣市、落地節點、延遲、裝置時區與連線類型，用於全台匿名統計。公開下載的只有每日彙整的統計，不含任何單筆測試；同一天同一家電信少於 3 筆的落地機房會合併計算。你可以隨時關閉「共享數據」，關閉時不儲存任何資料。網站字型由 Google Fonts 提供，載入字型時你的瀏覽器會連到 Google。'
 
 export const zh = {
   htmlLang: 'zh-Hant-TW',
@@ -164,10 +164,7 @@ export const zh = {
     copyLink: '複製連結',
     linkCopied: '已複製連結',
     copyFailed: '複製失敗，請手動選取',
-    noId: '你關閉了「共享數據」，這次的結果沒有儲存。結果連結和結果圖要有儲存的結果才做得出來，但文字還是可以直接分享。',
-    // Turnstile could not verify the test; neutral on purpose, nobody is being accused.
-    notStored: '這次結果沒有儲存，無法產生分享連結。文字還是可以直接分享。',
-    contributeAndShare: '開啟共享數據並重測，產生連結和圖',
+    noId: '你關閉了「共享數據」，這次的結果沒有儲存。結果連結和結果圖要有儲存的結果才做得出來，但文字還是可以直接分享。',    contributeAndShare: '開啟共享數據並重測，產生連結和圖',
     textOnly: '只分享文字',
     text: {
       out: (city: string, km: number | null, url: string) =>

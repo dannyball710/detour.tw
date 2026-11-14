@@ -79,9 +79,7 @@ const base: TestResult = {
 
 const FIXTURES: Record<string, TestResult> = {
   red: base,
-  optout: { ...base, counted: false, notCountedReason: 'opt-out' },
-  unverified: { ...base, counted: false, notCountedReason: 'unverified' },
-  sjc: { ...base, landing: { iata: 'SJC', rttMs: 139, distanceKm: 10380 }, extraKm: 10249, extraMs: 130 },
+  optout: { ...base, counted: false, notCountedReason: 'opt-out' },  sjc: { ...base, landing: { iata: 'SJC', rttMs: 139, distanceKm: 10380 }, extraKm: 10249, extraMs: 130 },
   ewr: { ...base, landing: { iata: 'EWR', rttMs: 214, distanceKm: 12540 }, extraKm: 12409, extraMs: 205 },
   fra: { ...base, landing: { iata: 'FRA', rttMs: 262, distanceKm: 9390 }, extraKm: 9259, extraMs: 253 },
   gru: { ...base, landing: { iata: 'GRU', rttMs: 330, distanceKm: 18700 }, extraKm: 18569, extraMs: 321 },

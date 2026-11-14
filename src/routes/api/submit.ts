@@ -25,11 +25,6 @@ export const Route = createFileRoute('/api/submit')({
             now: Date.now(),
             // In dev the reference trace sees our public IP while this server sees loopback.
             skipRefIdentity: import.meta.env.DEV && isPrivateIp(ip),
-            // Dev uses Cloudflare's test secret, whose siteverify answers hostname "example.com".
-            turnstile: {
-              secret: env.TURNSTILE_SECRET,
-              hostname: import.meta.env.DEV ? null : new URL(env.SITE_URL).hostname,
-            },
           })
           if (!outcome.ok) return error(outcome.status, outcome.error)
           return json(outcome.result)

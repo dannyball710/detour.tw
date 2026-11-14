@@ -57,10 +57,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TOKEN_SECRET: ${{ secrets.TOKEN_SECRET }}
-          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
         run: |
           test -n "$TOKEN_SECRET" || { echo 'TOKEN_SECRET is not set'; exit 1; }
-          test -n "$TURNSTILE_SECRET" || { echo 'TURNSTILE_SECRET is not set'; exit 1; }
           trap 'rm -f "$RUNNER_TEMP/secrets.json"' EXIT
-          node -e "require('fs').writeFileSync(process.env.RUNNER_TEMP + '/secrets.json', JSON.stringify({ TOKEN_SECRET: process.env.TOKEN_SECRET, TURNSTILE_SECRET: process.env.TURNSTILE_SECRET }))"
+          node -e "require('fs').writeFileSync(process.env.RUNNER_TEMP + '/secrets.json', JSON.stringify({ TOKEN_SECRET: process.env.TOKEN_SECRET }))"
           npx wrangler deploy --secrets-file "$RUNNER_TEMP/secrets.json"

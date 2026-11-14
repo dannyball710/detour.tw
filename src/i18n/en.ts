@@ -19,7 +19,7 @@ const blueSub = (joins: string) => (pct: number | null) =>
 
 // The privacy note, shown in full on the methodology page (/methodology#privacy).
 const privacy =
-  'We do not store your IP address. To stop repeat submissions, a keyed hash of your IP and device id that includes the date is kept for 48 hours, then removed from the database; database backups may keep it for up to 30 more days. Server request logging is off, so no logs hold your IP. Each test stores only ISP/ASN, county-level location, landing data centers, round-trip times, device time zone and connection type, for anonymous statistics. Only daily aggregates are published for download, never individual tests; landing data centers with fewer than 3 tests for an ISP on a day are merged. You can switch off "Share data" at any time; when it is off, nothing is stored. Fonts are served by Google Fonts, so your browser connects to Google to load them. To keep automated submissions out of the statistics we use Cloudflare Turnstile, which loads from challenges.cloudflare.com.'
+  'We do not store your IP address. To stop repeat submissions, a keyed hash of your IP and device id that includes the date is kept for 48 hours, then removed from the database; database backups may keep it for up to 30 more days. Server request logging is off, so no logs hold your IP. Each test stores only ISP/ASN, county-level location, landing data centers, round-trip times, device time zone and connection type, for anonymous statistics. Only daily aggregates are published for download, never individual tests; landing data centers with fewer than 3 tests for an ISP on a day are merged. You can switch off "Share data" at any time; when it is off, nothing is stored. Fonts are served by Google Fonts, so your browser connects to Google to load them.'
 
 export const en: Dict = {
   htmlLang: 'en',
@@ -166,10 +166,7 @@ export const en: Dict = {
     copyLink: 'Copy link',
     linkCopied: 'Link copied',
     copyFailed: "Couldn't copy. Please select the text by hand",
-    noId: '"Share data" is off, so this result was not stored. A result link and image need a stored result; the text can still be shared.',
-    // Turnstile could not verify the test; neutral on purpose, nobody is being accused.
-    notStored: 'This result was not stored, so no share link can be made. The text can still be shared.',
-    contributeAndShare: 'Turn on "Share data" and retest to get a link and image',
+    noId: '"Share data" is off, so this result was not stored. A result link and image need a stored result; the text can still be shared.',    contributeAndShare: 'Turn on "Share data" and retest to get a link and image',
     textOnly: 'Share text only',
     text: {
       out: (city: string, km: number | null, url: string) =>

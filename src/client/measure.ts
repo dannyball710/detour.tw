@@ -1,6 +1,5 @@
 import type { Lang, StartResponse, SubmitRequest, TestResult, Trace } from '#/lib/types'
 import { KEYS, readStore, writeStore } from './storage'
-import { turnstileToken } from './turnstile'
 
 export type MeasureErrorKind = 'failed' | 'rate' | 'offline'
 
@@ -114,10 +113,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export async function runMeasurement(lang: Lang, onProgress: (p: MeasureProgress) => void): Promise<TestResult> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new MeasureError('offline')
-  // A failed test no longer wants a token: this stops Turnstile and removes its widget.
-  const tokenWait = new AbortController()
   const fail = (e: unknown): never => {
-    tokenWait.abort()
     if (e instanceof MeasureError) throw e
     throw new MeasureError(navigator.onLine === false ? 'offline' : 'failed')
   }
@@ -141,11 +137,6 @@ export async function runMeasurement(lang: Lang, onProgress: (p: MeasureProgress
 
   const who = { user: start.user, isp: start.isp }
   onProgress({ step: 0, ...who })
-  // Turnstile only gates the submit, so it runs alongside the timed requests instead of after them
-  // (owner's call: a little overlapping traffic over a result ~2 s later). Opted out, nothing is
-  // stored, so the server skips the check and so do we.
-  const contribute = getContribute()
-  const turnstile = contribute ? turnstileToken(tokenWait.signal) : Promise.resolve(null)
 
   // No request may run past the test's budget: the 15 s limit is a real ceiling.
   const budget = () => Math.min(FETCH_TIMEOUT_MS, TEST_BUDGET_MS - (performance.now() - startedAt))
@@ -190,9 +181,6 @@ export async function runMeasurement(lang: Lang, onProgress: (p: MeasureProgress
   const wait = MIN_TOKEN_AGE_MS - (performance.now() - tokenAt)
   if (wait > 0) await sleep(wait)
   onProgress({ step: 2, ...seen })
-  // Submit only with a token in hand: the "landed" state stays up while a slow one arrives. Null
-  // means Turnstile is out of reach (blocked, retries spent, 15 s): the visitor still gets a result.
-  const token = await turnstile
 
   const conn = connectionType()
   const body: SubmitRequest = {
@@ -211,11 +199,9 @@ export async function runMeasurement(lang: Lang, onProgress: (p: MeasureProgress
       : null,
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     deviceId: getDeviceId(),
-    contribute,
+    contribute: getContribute(),
     conn,
     lang,
-    // Without a token the result is still shown, just not stored.
-    turnstile: token,
   }
 
   try {

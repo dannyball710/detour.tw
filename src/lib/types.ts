@@ -22,8 +22,6 @@ export type NotCountedReason =
   | 'vpn'
   | 'duplicate'
   | 'suspicious'
-  /** Turnstile verification failed or was missing: shown to the visitor, nothing stored. */
-  | 'unverified'
 
 /** GET /api/start */
 export interface StartResponse {
@@ -57,8 +55,6 @@ export interface SubmitRequest {
   contribute: boolean
   conn: string | null
   lang: Lang
-  /** Cloudflare Turnstile (invisible) token; null when the widget failed. Unverified tests are shown but not stored. */
-  turnstile: string | null
 }
 
 export interface TestResult {

@@ -29,7 +29,7 @@ export function base64url(bytes: Uint8Array): string {
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-export function fromBase64url(s: string): Uint8Array<ArrayBuffer> | null {
+function fromBase64url(s: string): Uint8Array<ArrayBuffer> | null {
   if (!/^[A-Za-z0-9_-]*$/.test(s)) return null
   try {
     const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/'))
