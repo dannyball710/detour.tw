@@ -70,21 +70,82 @@ describe('turnstileToken', () => {
     await expect(turnstileToken()).resolves.toBeNull()
   })
 
-  it('treats a widget error as no token, and marks the error handled', async () => {
+  // A passing hiccup must not cost the visitor a stored result: retry with a fresh widget.
+  it('retries an error with a new widget, and marks the error handled', async () => {
+    let n = 0
     let handled: unknown
-    fakeTurnstile((o) => (handled = o['error-callback']()))
-    await expect(turnstileToken()).resolves.toBeNull()
+    const { rendered, removed } = fakeTurnstile((o) => {
+      if (++n === 1) handled = o['error-callback']()
+      else o.callback('tok-2')
+    })
+    await expect(turnstileToken()).resolves.toBe('tok-2')
     expect(handled).toBe(true)
+    expect(rendered).toHaveLength(2)
+    expect(removed).toEqual(['w1', 'w2'])
   })
 
-  // The submit must never hang on Turnstile.
-  it('submits without a token after 3 s of silence', async () => {
-    fakeTurnstile(() => undefined)
+  it('retries a timed-out or expired challenge too', async () => {
+    let n = 0
+    fakeTurnstile((o) => {
+      n++
+      if (n === 1) o['timeout-callback']()
+      else if (n === 2) o['expired-callback']()
+      else o.callback('tok-3')
+    })
+    await expect(turnstileToken()).resolves.toBe('tok-3')
+  })
+
+  it('gives up with null after two retries', async () => {
+    const { rendered } = fakeTurnstile((o) => o['error-callback']())
+    await expect(turnstileToken()).resolves.toBeNull()
+    expect(rendered).toHaveLength(3)
+  })
+
+  // A replaced widget may still report; its word no longer counts.
+  it('ignores a late token from a widget already replaced by a retry', async () => {
+    let first: Options | undefined
+    fakeTurnstile((o) => {
+      if (!first) {
+        first = o
+        o['error-callback']()
+      }
+    })
     const token = turnstileToken()
-    await vi.advanceTimersByTimeAsync(2999)
+    await vi.advanceTimersByTimeAsync(0)
+    first!.callback('stale')
     let settled = false
     token.then(() => (settled = true))
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(settled).toBe(false)
+  })
+
+  // A failed test no longer wants a token; the widget must not linger after that.
+  it('resolves null and removes the widget when the caller gives up', async () => {
+    const { removed } = fakeTurnstile(() => undefined)
+    const ctrl = new AbortController()
+    const token = turnstileToken(ctrl.signal)
+    await vi.advanceTimersByTimeAsync(500)
+    ctrl.abort()
+    await expect(token).resolves.toBeNull()
+    expect(removed).toEqual(['w1'])
+  })
+
+  it('does not even render when the caller has already given up', async () => {
+    const { rendered } = fakeTurnstile(() => undefined)
+    const ctrl = new AbortController()
+    ctrl.abort()
+    await expect(turnstileToken(ctrl.signal)).resolves.toBeNull()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(rendered).toHaveLength(0)
+  })
+
+  // The submit waits for a token, but never forever: the visitor must still get a result.
+  it('gives up after a 15 s ceiling', async () => {
+    fakeTurnstile(() => undefined)
+    const token = turnstileToken()
+    let settled = false
+    token.then(() => (settled = true))
+    await vi.advanceTimersByTimeAsync(14_999)
     expect(settled).toBe(false)
     await vi.advanceTimersByTimeAsync(1)
     await expect(token).resolves.toBeNull()

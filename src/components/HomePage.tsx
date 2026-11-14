@@ -105,7 +105,7 @@ export function HomePage({ lang, stats: loaded, shared }: Props) {
   const startsShared = useRef(!!shared)
   useEffect(() => {
     setContributeState(getContribute())
-    // Fetched now, while /api/start is in flight; the measurement waits for it before timing anything.
+    // Fetched now, so the token is usually ready by the time the measurement finishes.
     loadTurnstile()
     if (!startsShared.current) run()
   }, [run])

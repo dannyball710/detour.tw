@@ -5,7 +5,9 @@
 export const TURNSTILE_SITE_KEY = '0x4AAAAAAGA-TLnx4f6LdEZp'
 export const TURNSTILE_TEST_SITE_KEY = '1x00000000000000000000BB'
 const SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
-const TOKEN_WAIT_MS = 3000
+// The submit waits for a token up to this long (counted from the request) before going without one.
+const MAX_WAIT_MS = 15_000
+const MAX_RETRIES = 2
 
 interface Turnstile {
   render: (el: HTMLElement, options: Record<string, unknown>) => string | undefined
@@ -42,36 +44,49 @@ export function loadTurnstile(): Promise<Turnstile | null> {
   return loading
 }
 
-/** True once the script is in, or after `ms`: the measurement waits on this so the download never overlaps a timed request. */
-export function turnstileSettled(ms: number): Promise<void> {
-  return Promise.race([loadTurnstile().then(() => undefined), new Promise<void>((r) => setTimeout(r, ms))])
-}
-
 /**
- * One fresh single-use token, or null within ~3 s when there is none: script blocked, error,
- * timeout, or a challenge that would need the visitor (we never show one).
+ * One fresh single-use token. A failed, timed-out or expired challenge is retried up to
+ * MAX_RETRIES times with a new widget. Null only when Turnstile is out of reach: script blocked,
+ * retries spent, a browser it does not support, a challenge that would need the visitor (we never
+ * show one), the 15 s ceiling, or `signal` aborted by the caller.
  */
-export function turnstileToken(): Promise<string | null> {
+export function turnstileToken(signal?: AbortSignal): Promise<string | null> {
   return new Promise((resolve) => {
     let widget: string | undefined
     let host: HTMLElement | null = null
+    let attempt = 0
     let done = false
-    const finish = (token: string | null) => {
-      if (done) return
-      done = true
-      clearTimeout(timer)
+    const clear = () => {
       try {
         if (widget) window.turnstile?.remove(widget)
       } catch {
         // Already gone.
       }
+      widget = undefined
       host?.remove()
+      host = null
+    }
+    const finish = (token: string | null) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', abort)
+      clear()
       resolve(token)
     }
-    const timer = setTimeout(() => finish(null), TOKEN_WAIT_MS)
-    loadTurnstile().then((ts) => {
-      if (done) return
-      if (!ts) return finish(null)
+    const abort = () => finish(null)
+    const timer = setTimeout(abort, MAX_WAIT_MS)
+    if (signal?.aborted) return abort()
+    signal?.addEventListener('abort', abort)
+
+    const run = (ts: Turnstile) => {
+      clear()
+      const mine = ++attempt
+      // Callbacks of a widget already replaced by a retry are ignored.
+      const live = (fn: () => void) => () => {
+        if (mine === attempt) fn()
+      }
+      const retry = live(() => (attempt <= MAX_RETRIES ? run(ts) : finish(null)))
       // Zero-size and clipped: even an interactive challenge could never become visible.
       host = document.createElement('div')
       host.setAttribute('aria-hidden', 'true')
@@ -83,23 +98,32 @@ export function turnstileToken(): Promise<string | null> {
           // Rendered only when a token is wanted, so rendering is what runs the challenge.
           appearance: 'interaction-only',
           size: 'flexible',
+          // Retries are ours (a fresh widget each time), so Turnstile's own are off.
           retry: 'never',
           'refresh-expired': 'never',
-          callback: (token: string) => finish(token),
-          'before-interactive-callback': () => finish(null),
-          'unsupported-callback': () => finish(null),
-          'timeout-callback': () => finish(null),
-          'expired-callback': () => finish(null),
+          callback: (token: string) => {
+            if (mine === attempt) finish(token)
+          },
+          'before-interactive-callback': live(() => finish(null)),
+          'unsupported-callback': live(() => finish(null)),
+          'timeout-callback': retry,
+          'expired-callback': retry,
           // Returning true marks the error as handled, so Turnstile does not throw it to the console.
           'error-callback': () => {
-            finish(null)
+            retry()
             return true
           },
         })
-        if (!widget) finish(null)
+        if (!widget) retry()
       } catch {
-        finish(null)
+        retry()
       }
+    }
+
+    loadTurnstile().then((ts) => {
+      if (done) return
+      if (!ts) return finish(null)
+      run(ts)
     })
   })
 }
