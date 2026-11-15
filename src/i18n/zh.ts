@@ -321,7 +321,6 @@ export const zh = {
       none: (date: string) => `${date}：沒有測試`,
       few: '（樣本不足）',
     },
-    trendHeading: '近 30 天：在台灣落地的比例',
     intlHeading: '國際用戶連線狀況',
     intlCols: { country: '國家／地區', n: '樣本數', dist: '落地距離中位數', top: '最常連線' },
     empty: '還沒有足夠的數據可以出報告。',

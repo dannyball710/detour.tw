@@ -5,10 +5,9 @@ import { lightForLanding } from '#/lib/geo'
 import type { IspStats, Lang, StatsResponse } from '#/lib/types'
 import { PageBand } from './PageBand'
 import { IspBoard, LightLegend, MIN_SAMPLE } from './StatsSummary'
-import { DailyLights, MIN_DAY_N, ShareBar, TrendChart, dailyBars, pct, windowDays } from './charts'
-import type { DailyBar, TrendSeries } from './charts'
+import { DailyLights, MIN_DAY_N, ShareBar, dailyBars, pct, windowDays } from './charts'
+import type { DailyBar } from './charts'
 
-const TREND_SERIES = 6
 const COLO_ROWS = 6
 
 function ColoDistribution({ lang, isp, bars }: { lang: Lang; isp: IspStats; bars: DailyBar[] }) {
@@ -79,15 +78,6 @@ export function StatsPage({ lang, stats: loaded }: { lang: Lang; stats: StatsRes
   const d = getDict(lang)
   const t = d.report
   const isps = stats ? [...stats.isps].sort((x, y) => y.n - x.n) : []
-  const days = stats ? [...new Set(stats.trend.map((r) => r.day))].sort() : []
-  const series: TrendSeries[] = isps
-    .filter((i) => i.n >= MIN_SAMPLE)
-    .slice(0, TREND_SERIES)
-    .map((i) => ({
-      key: i.key,
-      name: ispKeyName(i.key, lang),
-      points: (stats?.trend ?? []).filter((r) => r.isp === i.key).map((r) => ({ day: r.day, v: r.domestic, n: r.n })),
-    }))
   const statsDays = stats ? windowDays(stats.generatedAt, stats.windowDays) : []
   const intl = stats ? [...stats.intl].sort((x, y) => y.n - x.n) : []
   const empty = !!stats && stats.totals.allTime === 0
@@ -119,13 +109,6 @@ export function StatsPage({ lang, stats: loaded }: { lang: Lang; stats: StatsRes
                   ))}
                 </div>
                 <LightLegend lang={lang} />
-              </section>
-            )}
-
-            {series.length > 0 && days.length > 1 && (
-              <section className="report-section" aria-labelledby="trend-h">
-                <h2 id="trend-h">{t.trendHeading}</h2>
-                <TrendChart series={series} days={days} label={t.trendHeading} />
               </section>
             )}
 

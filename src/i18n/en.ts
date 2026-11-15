@@ -327,7 +327,6 @@ export const en: Dict = {
       none: (date: string) => `${date}: no tests`,
       few: ' (small sample)',
     },
-    trendHeading: 'Share landing in Taiwan, last 30 days',
     intlHeading: 'International connections',
     intlCols: { country: 'Country / region', n: 'n', dist: 'Median landing distance', top: 'Most common node' },
     empty: 'Not enough data for a report yet.',
