@@ -501,12 +501,12 @@ main > .hero:first-child {
 }
 
 /*
- * Map and the whole pass share the first screen, so one phone screenshot holds both: the map
- * takes what the screen leaves after the header (60px), the headline and the pass (--pass-h,
- * its tallest state). A short screen keeps a readable minimum and lets the pass run below.
+ * Map and pass share the first screen, so one phone screenshot holds both: the map takes what
+ * the screen leaves after the header (60px), the headline and the pass down to its stub
+ * (--pass-h); the action buttons may fall below. A short screen keeps a readable minimum.
  */
 .chart {
-  --pass-h: 472px;
+  --pass-h: 362px;
   height: clamp(
     200px,
     100svh - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
@@ -520,9 +520,7 @@ main > .hero:first-child {
 }
 
 :lang(en) .chart {
-  --pass-h: 490px;
-  /* The English map is the smallest; keep the place names under the markers clear of the pass. */
-  --fy1: calc(100cqh - 50px);
+  --pass-h: 380px;
   height: clamp(
     200px,
     100svh - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
@@ -1222,6 +1220,24 @@ main > .hero:first-child {
   font-weight: 500;
   line-height: 1.4;
   white-space: nowrap;
+}
+
+/* Smaller big type on a phone leaves the map more of the first screen. */
+@media (max-width: 439px) {
+  .pass-code,
+  .pass-track {
+    height: 44px;
+  }
+  .pass-code {
+    font-size: 44px;
+    line-height: 44px;
+  }
+  .pass-figures {
+    margin-top: 12px;
+  }
+  .figure-value {
+    font-size: 46px;
+  }
 }
 
 @media (min-width: 440px) {
