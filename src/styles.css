@@ -508,7 +508,7 @@ main > .hero:first-child {
 .chart {
   --pass-h: 472px;
   height: clamp(
-    220px,
+    200px,
     100svh - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
     62.5vw + 140px + var(--backdrop)
   );
@@ -522,7 +522,7 @@ main > .hero:first-child {
 :lang(en) .chart {
   --pass-h: 490px;
   height: clamp(
-    220px,
+    200px,
     100svh - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
     62.5vw + 92px + var(--backdrop)
   );
