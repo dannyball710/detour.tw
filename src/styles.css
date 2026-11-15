@@ -501,11 +501,17 @@ main > .hero:first-child {
 }
 
 /*
- * As tall as the phone allows while the route row and both figures stay on the first screen
- * (844 px): the map gets the headline's height to spare, which English needs for itself.
+ * Map and the whole pass share the first screen, so one phone screenshot holds both: the map
+ * takes what the screen leaves after the header (60px), the headline and the pass (--pass-h,
+ * its tallest state). A short screen keeps a readable minimum and lets the pass run below.
  */
 .chart {
-  height: calc(62.5vw + 140px + var(--backdrop));
+  --pass-h: 472px;
+  height: clamp(
+    220px,
+    100svh - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
+    62.5vw + 140px + var(--backdrop)
+  );
   /* Where the route may sit: clear of the headline above and of the pass riding up below. */
   --fx0: 16px;
   --fx1: calc(100cqw - 16px);
@@ -514,7 +520,12 @@ main > .hero:first-child {
 }
 
 :lang(en) .chart {
-  height: calc(62.5vw + 92px + var(--backdrop));
+  --pass-h: 490px;
+  height: clamp(
+    220px,
+    100svh - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
+    62.5vw + 92px + var(--backdrop)
+  );
 }
 
 .hero-pass {
