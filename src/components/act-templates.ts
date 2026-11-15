@@ -1,4 +1,4 @@
-import { carrierOf } from '#/data/isps'
+import { carrierOf, getIsp } from '#/data/isps'
 import { SITE_URL, coloCity, fmtDate, fmtNum, ispName, pathFor } from '#/i18n'
 import type { StatsResponse, TestResult } from '#/lib/types'
 import { MIN_SAMPLE } from './StatsSummary'
@@ -28,7 +28,7 @@ function othersDomesticPct(stats: StatsResponse | null, ispKey: string): number 
   if (!stats) return null
   // "Other carriers" leaves out every group of the visitor's own company (HiNet and its mobile network).
   const carrier = carrierOf(ispKey)
-  const others = stats.isps.filter((i) => carrierOf(i.key) !== carrier && i.key !== 'other')
+  const others = stats.isps.filter((i) => carrierOf(i.key) !== carrier && getIsp(i.key))
   const n = others.reduce((s, i) => s + i.n, 0)
   if (n < MIN_SAMPLE) return null
   return Math.round((others.reduce((s, i) => s + i.n * i.domestic, 0) / n) * 100)

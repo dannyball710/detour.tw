@@ -115,7 +115,8 @@ export async function aggregateDays(
         day = r.day
         isps = new Map()
       }
-      const isp = r.isp_key ?? OTHER_ISP_KEY
+      // Unmapped ASNs stay pooled in the download: one may be a single person's own network.
+      const isp = r.isp_key && getIsp(r.isp_key) ? r.isp_key : OTHER_ISP_KEY
       let colos = isps.get(isp)
       if (!colos) isps.set(isp, (colos = new Map()))
       let cell = colos.get(r.colo)

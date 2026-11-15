@@ -175,6 +175,15 @@ describe('CSV export (daily aggregates) to R2', () => {
     )
   })
 
+  // A per-ASN group may be one person's own network: the public download never names it.
+  it('pools networks known only by ASN into one "other" group', async () => {
+    for (const isp of ['as210445', 'as202820', 'as210445']) insertTest({ createdAt: NOW - 60_000, isp })
+    await buildExport(db.d1, r2.asBucket(), NOW)
+    const csv = await (await r2.get(EXPORT_KEY))!.text()
+    expect(csv).not.toMatch(/as\d+/)
+    expect(csv).toContain('2026-11-14,other,Other / unmapped network,LAX,Los Angeles,US,3,')
+  })
+
   it('page boundaries (incl. equal created_at) do not change the result', async () => {
     fixture()
     insertTest({ createdAt: NOW - 95_000, colo: 'LAX', rtt: 155 }) // same created_at as a fixture row

@@ -1,5 +1,5 @@
 import { getColo } from '#/data/colos'
-import { isHostingAsn, ispForAsn, OTHER_ISP_KEY } from '#/data/isps'
+import { asnKey, isHostingAsn, ispForAsn, OTHER_ISP_KEY } from '#/data/isps'
 import { distanceToColoKm, lightForLanding, minPhysicalRttMs } from '#/lib/geo'
 import type { Category, Light, SubmitRequest, TestResult } from '#/lib/types'
 import { COUNTY_SEATS, deriveCounty } from './county'
@@ -75,7 +75,11 @@ export function publicCoords(view: ServerView): { lat: number | null; lon: numbe
 export function visitorOf(view: ServerView): Pick<TestResult, 'user' | 'isp'> {
   return {
     user: { country: view.country, regionCode: view.regionCode, region: view.region, ...publicCoords(view) },
-    isp: { key: ispForAsn(view.asn)?.key ?? OTHER_ISP_KEY, asn: view.asn, asOrganization: view.asOrganization },
+    isp: {
+      key: ispForAsn(view.asn)?.key ?? (view.asn != null ? asnKey(view.asn) : OTHER_ISP_KEY),
+      asn: view.asn,
+      asOrganization: view.asOrganization,
+    },
   }
 }
 

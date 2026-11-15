@@ -332,6 +332,7 @@ export const en: Dict = {
     empty: 'Not enough data for a report yet.',
     unavailable: 'Statistics are unavailable right now. Please try again later.',
     other: 'Other',
+    asnMore: (n: number) => `${n} more ${n === 1 ? 'network' : 'networks'}, listed by ASN`,
   },
   method: {
     eyebrow: 'Methodology',
@@ -393,7 +394,7 @@ export const en: Dict = {
       'Asia Pacific Telecom merged into Far EasTone in December 2023; the legacy network is still distinguishable and is listed separately.',
       "Taiwan Mobile's mobile network (AS24158) and Taiwan Mobile Broadband (AS24163–24165) are reported separately.",
       'Academic and government networks are their own groups. Cloud, VPN, iCloud Private Relay and WARP addresses are not household connections: they get the gray light and are never counted.',
-      'Taiwanese ASNs not mapped to a brand are reported as "Other Taiwanese networks".',
+      "Taiwanese networks not mapped to a brand are listed by ASN. The public daily download still pools them into one group, since a single ASN may be one person's own network.",
     ],
     ispCols: { isp: 'Brand', asns: 'ASNs' },
     privacyHeading: 'Privacy',

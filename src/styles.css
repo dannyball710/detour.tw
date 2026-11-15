@@ -2311,6 +2311,26 @@ main > .hero:first-child {
   gap: 14px;
 }
 
+.asn-more {
+  margin-top: 14px;
+}
+
+.asn-more > summary {
+  /* Keeps the native disclosure triangle; padding gives it a touch-sized target. */
+  padding-block: 11px;
+  color: var(--graphite);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.asn-more > summary:hover {
+  color: var(--ink);
+}
+
+.asn-more[open] > summary {
+  margin-bottom: 8px;
+}
+
 .dist {
   display: flex;
   flex-direction: column;

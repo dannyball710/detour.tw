@@ -147,6 +147,12 @@ describe('derived values', () => {
   it('files Chunghwa mobile apart from HiNet', () => {
     expect(evaluate(body(), { ...taipei, asn: 17421 }, NOW).row.isp_key).toBe('cht-mobile')
   })
+
+  // No catch-all group: a network without a brand is reported under its own ASN.
+  it('keys an unmapped network by its ASN', () => {
+    expect(evaluate(body(), { ...taipei, asn: 131657 }, NOW).row.isp_key).toBe('as131657')
+    expect(evaluate(body(), { ...taipei, asn: 9924 }, NOW).row.isp_key).toBe('tfn')
+  })
 })
 
 // A fabricated submission must not silently enter the stats; these are physical / cross-checked impossibilities.

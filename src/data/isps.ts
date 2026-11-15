@@ -18,6 +18,7 @@ export const TW_ISPS: Isp[] = [
   // AS24157 is the former Taiwan Star (merged 2023-12-01)
   { key: 'twm', zh: '台灣大哥大', en: 'Taiwan Mobile', asns: [24158, 24157] },
   { key: 'twmbb', zh: '台灣大寬頻', en: 'Taiwan Mobile Broadband (TFN Media)', asns: [24163, 24164, 24165] },
+  { key: 'tfn', zh: '台灣固網', en: 'Taiwan Fixed Network (TFN)', asns: [9924] },
   { key: 'fet', zh: '遠傳電信', en: 'Far EasTone', asns: [9674, 18412] },
   // Merged into Far EasTone 2023-12-15; kept separate because the legacy network is still distinct
   { key: 'apt', zh: '亞太電信（已併入遠傳）', en: 'Asia Pacific Telecom (now Far EasTone)', asns: [17709, 24154, 24155] },
@@ -41,6 +42,8 @@ export const TW_ISPS: Isp[] = [
   { key: 'pittqiao', zh: 'Pittqiao', en: 'Pittqiao Network Information', asns: [131642, 18178] },
   { key: 'sanda', zh: 'San Da Cable TV', en: 'San Da Cable TV', asns: [131611] },
   { key: 'taifo', zh: 'TAIFO', en: 'Taiwan Intelligent Fiber Optic Network', asns: [131584] },
+  { key: 'twds', zh: 'Taiwan Digital Streaming', en: 'Taiwan Digital Streaming', asns: [18041] },
+  { key: 'skydigital', zh: 'Sky Digital', en: 'Sky Digital', asns: [134823] },
   // Academic / government networks: real Taiwanese paths, reported as their own groups
   { key: 'tanet', zh: '台灣學術網路（TANet）', en: 'Taiwan Academic Network (TANet)', asns: [1659] },
   { key: 'twaren', zh: '台灣高速研究網路（TWAREN）', en: 'TWAREN (NCHC)', asns: [7539] },
@@ -48,8 +51,17 @@ export const TW_ISPS: Isp[] = [
   { key: 'gsn', zh: '政府網際服務網（GSN）', en: 'Government Service Network (GSN)', asns: [4782] },
 ]
 
-/** Key used for Taiwanese ASNs we have not mapped to a brand. */
+/** Key used when a test has no ASN at all. */
 export const OTHER_ISP_KEY = 'other'
+
+/** A network not mapped to a brand is its own group, keyed by its ASN. */
+export const asnKey = (asn: number) => `as${asn}`
+
+/** The ASN behind an `asnKey`, or null for a brand (or `other`). */
+export function asnOfKey(key: string): number | null {
+  const m = /^as(\d+)$/.exec(key)
+  return m ? Number(m[1]) : null
+}
 
 /**
  * Networks whose traffic is not a household connection: cloud/hosting, VPN backbones,

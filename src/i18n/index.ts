@@ -1,5 +1,5 @@
 import { getColo } from '#/data/colos'
-import { getIsp } from '#/data/isps'
+import { asnOfKey, getIsp } from '#/data/isps'
 import { TW_REGIONS } from '#/data/tw-regions'
 import type { Lang } from '#/lib/types'
 import { en } from './en'
@@ -73,7 +73,9 @@ export function ispName(
 export function ispKeyName(key: string, lang: Lang): string {
   const known = getIsp(key)
   if (known) return lang === 'en' ? known.en : known.zh
-  if (key === 'other') return lang === 'en' ? 'Other Taiwanese networks' : '其他台灣網路'
+  const asn = asnOfKey(key)
+  if (asn != null) return `AS${asn}`
+  if (key === 'other') return lang === 'en' ? 'Unknown network' : '不明網路'
   return key
 }
 

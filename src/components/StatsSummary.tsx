@@ -1,3 +1,4 @@
+import { asnOfKey } from '#/data/isps'
 import { coloCity, fmtNum, getDict, ispKeyName, pathFor } from '#/i18n'
 import { lightForLanding } from '#/lib/geo'
 import type { IspStats, Lang, StatsResponse } from '#/lib/types'
@@ -107,7 +108,13 @@ export function LightLegend({ lang }: { lang: Lang }) {
 
 export function StatsSummary({ lang, stats }: { lang: Lang; stats: StatsResponse | null }) {
   const t = getDict(lang).stats
-  const isps = stats ? [...stats.isps].sort((a, b) => b.n - a.n).slice(0, HOME_ROWS) : []
+  // The home board shows brands only; networks known by ASN alone are on /stats.
+  const isps = stats
+    ? stats.isps
+        .filter((i) => asnOfKey(i.key) == null)
+        .sort((a, b) => b.n - a.n)
+        .slice(0, HOME_ROWS)
+    : []
   return (
     <section id="stats" className="section section-paper" aria-labelledby="stats-h">
       <div className="wrap">

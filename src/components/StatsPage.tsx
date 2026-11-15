@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useDemoStats } from '#/client/use-demo-stats'
+import { asnOfKey } from '#/data/isps'
 import { coloCity, countryName, fmtDate, fmtDay, fmtNum, getDict, ispKeyName } from '#/i18n'
 import { lightForLanding } from '#/lib/geo'
 import type { IspStats, Lang, StatsResponse } from '#/lib/types'
@@ -77,7 +78,10 @@ export function StatsPage({ lang, stats: loaded }: { lang: Lang; stats: StatsRes
   const stats = useDemoStats(loaded)
   const d = getDict(lang)
   const t = d.report
-  const isps = stats ? [...stats.isps].sort((x, y) => y.n - x.n) : []
+  const sorted = stats ? [...stats.isps].sort((x, y) => y.n - x.n) : []
+  // Brands are listed; networks known only by their ASN wait behind a disclosure.
+  const isps = sorted.filter((i) => asnOfKey(i.key) == null)
+  const asns = sorted.filter((i) => asnOfKey(i.key) != null)
   const statsDays = stats ? windowDays(stats.generatedAt, stats.windowDays) : []
   const intl = stats ? [...stats.intl].sort((x, y) => y.n - x.n) : []
   const empty = !!stats && stats.totals.allTime === 0
@@ -97,6 +101,12 @@ export function StatsPage({ lang, stats: loaded }: { lang: Lang; stats: StatsRes
             <section className="report-section" aria-labelledby="isp-h">
               <h2 id="isp-h">{t.ispHeading}</h2>
               <IspBoard lang={lang} isps={isps} full />
+              {asns.length > 0 && (
+                <details className="asn-more">
+                  <summary>{t.asnMore(asns.length)}</summary>
+                  <IspBoard lang={lang} isps={asns} full />
+                </details>
+              )}
               <LightLegend lang={lang} />
             </section>
 
@@ -108,6 +118,16 @@ export function StatsPage({ lang, stats: loaded }: { lang: Lang; stats: StatsRes
                     <ColoDistribution key={i.key} lang={lang} isp={i} bars={dailyBars(stats.trend, i.key, statsDays)} />
                   ))}
                 </div>
+                {asns.length > 0 && (
+                  <details className="asn-more">
+                    <summary>{t.asnMore(asns.length)}</summary>
+                    <div className="dist-grid">
+                      {asns.map((i) => (
+                        <ColoDistribution key={i.key} lang={lang} isp={i} bars={dailyBars(stats.trend, i.key, statsDays)} />
+                      ))}
+                    </div>
+                  </details>
+                )}
                 <LightLegend lang={lang} />
               </section>
             )}
