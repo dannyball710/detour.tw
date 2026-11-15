@@ -7,6 +7,13 @@ import { getDict, langFromPath, pathFor } from '#/i18n'
 
 import appCss from '../styles.css?url'
 
+/*
+ * The screen height the phone layout is sized by, taken once and kept while the browser's
+ * toolbar slides in and out (only a width change, i.e. rotation, re-reads it). `svh` should do
+ * this on its own, but several mobile browsers and in-app webviews still resize it.
+ */
+const SCREEN_H_SCRIPT = `(function(){var w=0;function s(){if(innerWidth===w)return;w=innerWidth;document.documentElement.style.setProperty('--screen-h',innerHeight+'px')}s();addEventListener('resize',s)})()`
+
 // Display: Fira Sans Extra Condensed (figures, IATA codes). Utility: B612 Mono. Body: Noto Sans TC.
 const FONTS_CSS =
   'https://fonts.googleapis.com/css2?family=B612+Mono:wght@400;700&family=Fira+Sans+Extra+Condensed:wght@600;800&family=Noto+Sans+TC:wght@400;500;700&display=swap'
@@ -36,9 +43,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const lang = langFromPath(pathname)
   return (
-    <html lang={getDict(lang).htmlLang}>
+    // The inline script sets --screen-h on <html> before hydration.
+    <html lang={getDict(lang).htmlLang} suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: SCREEN_H_SCRIPT }} />
       </head>
       <body>
         <SiteHeader lang={lang} pathname={pathname} />

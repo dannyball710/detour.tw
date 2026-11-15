@@ -504,12 +504,13 @@ main > .hero:first-child {
  * Map and pass share the first screen, so one phone screenshot holds both: the map takes what
  * the screen leaves after the header (60px), the headline and the pass down to its stub
  * (--pass-h); the action buttons may fall below. A short screen keeps a readable minimum.
+ * --screen-h (set in __root.tsx) holds still while the browser toolbar moves.
  */
 .chart {
   --pass-h: 362px;
   height: clamp(
     200px,
-    100svh - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
+    var(--screen-h, 100svh) - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
     62.5vw + 140px + var(--backdrop)
   );
   /* Where the route may sit: clear of the headline above and of the pass riding up below. */
@@ -523,7 +524,7 @@ main > .hero:first-child {
   --pass-h: 380px;
   height: clamp(
     200px,
-    100svh - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
+    var(--screen-h, 100svh) - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
     62.5vw + 92px + var(--backdrop)
   );
 }
