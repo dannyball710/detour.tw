@@ -521,6 +521,8 @@ main > .hero:first-child {
 
 :lang(en) .chart {
   --pass-h: 490px;
+  /* The English map is the smallest; keep the place names under the markers clear of the pass. */
+  --fy1: calc(100cqh - 50px);
   height: clamp(
     200px,
     100svh - 60px - var(--says-h) + var(--overlap) + var(--backdrop) + 34px - var(--pass-h) - 12px,
