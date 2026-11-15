@@ -23,6 +23,8 @@ export default {
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers })
   },
   scheduled(controller, env, ctx) {
-    ctx.waitUntil(runCron(controller.cron, { db: env.DB, bucket: env.EXPORTS }, Date.now()))
+    // The scheduled time, not the start time: a late run still dates its snapshot on the 5-minute
+    // grid, which the stats edge cache times its expiry by.
+    ctx.waitUntil(runCron(controller.cron, { db: env.DB, bucket: env.EXPORTS }, controller.scheduledTime))
   },
 } satisfies ExportedHandler<Env>

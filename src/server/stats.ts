@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { COLOS, getColo } from '#/data/colos'
+import { asnOfKey } from '#/data/isps'
 import { TW_REGIONS } from '#/data/tw-regions'
 import { median } from '#/lib/geo'
 import type { IspStats, StatsResponse } from '#/lib/types'
@@ -7,10 +8,25 @@ import { conditional, edgeCached } from './http'
 import { sha256Hex, taipeiDay } from './token'
 
 export const WINDOW_DAYS = 30
+/** Fewest tests a network known only by its ASN needs in the window to be listed. */
+export const MIN_ASN_GROUP_N = 3
 // Medians are computed in JS (D1 has no median); cap the rows we pull so a viral week cannot blow the Worker's memory.
 const MEDIAN_SAMPLE = 50_000
 // The snapshot is rebuilt every 5 minutes by cron; the per-colo edge copy must not outlive that.
 const EDGE_TTL_SECONDS = 300
+// Time for the cron to start and write the next snapshot after its 5-minute mark.
+const NEXT_SNAPSHOT_GRACE_MS = 20_000
+// While the next snapshot is late, look again this often (one primary-key read per colo).
+const LATE_SNAPSHOT_RETRY_SECONDS = 15
+
+/**
+ * The edge copy expires just after the next snapshot is due, not a fixed 5 minutes after it was
+ * stored: a copy stored at 4:59 into a cycle would otherwise hide the next snapshot for 5 more minutes.
+ */
+export function edgeTtlFor(generatedAt: number, now: number): number {
+  const due = generatedAt + EDGE_TTL_SECONDS * 1000 + NEXT_SNAPSHOT_GRACE_MS
+  return Math.min(EDGE_TTL_SECONDS, Math.max(LATE_SNAPSHOT_RETRY_SECONDS, Math.ceil((due - now) / 1000)))
+}
 export const STATS_CACHE_CONTROL = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600'
 // Bump on any StatsResponse shape change: the snapshot row and the edge copies are keyed by it, so no
 // stale shape is served after a deploy (the new key starts empty and is computed once).
@@ -109,7 +125,11 @@ export async function computeStats(db: D1Database, now: number): Promise<StatsRe
     }
   }
 
+  // A network known only by its ASN may be one person's own: with under 3 tests in the window its
+  // row would publish single results, so it is left out (the same rule as the CSV's small cells).
+  const listed = (key: string) => asnOfKey(key) == null || (isps.get(key)?.n ?? 0) >= MIN_ASN_GROUP_N
   const ispStats: IspStats[] = [...isps.entries()]
+    .filter(([key]) => listed(key))
     .map(([key, s]) => {
       const r = rtts.get(key)
       return {
@@ -160,6 +180,7 @@ export async function computeStats(db: D1Database, now: number): Promise<StatsRe
     totals: { counted: totals.counted, today: totals.today, allTime: totals.allTime },
     isps: ispStats,
     trend: [...trend.values()]
+      .filter((t) => listed(t.isp))
       .map((t) => {
         const lights = { green: share(t.green, t.n), yellow: share(t.yellow, t.n), red: share(t.red, t.n) }
         return { day: t.day, isp: t.isp, n: t.n, domestic: lights.green, lights }
@@ -212,8 +233,11 @@ export async function loadStatsSnapshot(db: D1Database, now: number): Promise<Sn
 
 /** Edge cache (fixed key, so it cannot be busted) -> snapshot row -> compute once. */
 function cachedStats(db: D1Database, siteUrl: string): Promise<Response> {
-  return edgeCached(`${siteUrl}/api/stats?v=${SNAPSHOT_KEY}`, EDGE_TTL_SECONDS, async () => {
+  let generatedAt = 0
+  const ttl = () => edgeTtlFor(generatedAt, Date.now())
+  return edgeCached(`${siteUrl}/api/stats?v=${SNAPSHOT_KEY}`, ttl, async () => {
     const s = await loadStatsSnapshot(db, Date.now())
+    generatedAt = s.generated_at
     return new Response(s.body, {
       headers: {
         'content-type': 'application/json; charset=utf-8',

@@ -150,6 +150,20 @@ describe('computeStats', () => {
     expect(s.intl).toEqual([{ country: 'JP', n: 3, medianDistanceKm: 80, topColo: 'NRT' }])
   })
 
+  // A network known only by its ASN may be one person's own: under 3 tests it would publish single results.
+  it('lists an ASN-only network from 3 tests; brands at any count', async () => {
+    for (let i = 0; i < 2; i++) insert({ isp: 'as210445', rtt: 150 })
+    for (let i = 0; i < 3; i++) insert({ isp: 'as131657', rtt: 150 })
+    const s = await computeStats(db.d1, NOW)
+    const keys = s.isps.map((i) => i.key)
+    expect(keys).toContain('as131657')
+    expect(keys).not.toContain('as210445')
+    expect(keys).toContain('twm')
+    expect(s.isps.find((i) => i.key === 'twm')!.n).toBeLessThan(3)
+    expect(s.trend.some((t) => t.isp === 'as210445')).toBe(false)
+    expect(s.trend.some((t) => t.isp === 'as131657')).toBe(true)
+  })
+
   it('empty database', async () => {
     const s = await computeStats(createFakeD1().d1, NOW)
     expect(s).toMatchObject({ totals: { counted: 0, today: 0, allTime: 0 }, isps: [], chtUsShare: null })

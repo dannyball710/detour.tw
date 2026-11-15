@@ -112,7 +112,7 @@ export const HOSTING_ASNS: Record<number, string> = {
   131632: 'GMI Cloud', 131676: 'GMI Cloud', 24168: 'Cloudmax', 152626: 'Cloudbase',
   131637: 'FastCloud', 131628: 'Tai-Fu Cloud', 9917: 'Simplecloud', 7536: 'CDNEXIS',
   // Taiwanese enterprise-only / backbone networks (corporate traffic, not households)
-  9924: 'Taiwan Fixed Network (enterprise)', 9919: 'New Century InfoComm', 9505: 'Taiwan Internet Gateway',
+  9919: 'New Century InfoComm', 9505: 'Taiwan Internet Gateway',
   10126: 'CHTI', 9680: 'HiNet USA', 131660: 'Chunghwa CDN', 7656: 'TWNAP', 4781: 'PAGIC.net', 4783: 'SYSTEX',
   23675: 'TSMC', 131589: 'Foxconn', 131144: 'ASUS', 131593: 'Pegatron', 131680: 'Compal', 131681: 'Qisda',
   131599: 'Wistron', 131663: 'Gigabyte', 131683: 'InnoLux', 131655: 'Nan Ya Plastics', 18422: 'ITRI', 18426: 'NARL',

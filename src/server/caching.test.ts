@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CRON_HOURLY, CRON_STATS, runCron } from './cron'
 import { buildExport, dailyExportKey, dailyExportResponse, EXPORT_KEY, exportResponse } from './export'
 import { resultResponse } from './results'
-import { loadStatsSnapshot, refreshStatsSnapshot, statsResponse } from './stats'
+import { edgeTtlFor, loadStatsSnapshot, refreshStatsSnapshot, statsResponse } from './stats'
 import { flushWaitUntil } from './testing/cloudflare-workers'
 import { createFakeD1 } from './testing/fake-d1'
 import { installMemoryCache, MemoryCache, MemoryR2 } from './testing/fakes'
@@ -45,6 +45,11 @@ beforeEach(() => {
   r2 = new MemoryR2()
   cache = installMemoryCache()
   seq = 0
+})
+
+// A failing test must not leave a mocked clock behind for the next one.
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 // Requests must never aggregate over `tests` once a snapshot exists: that is what keeps D1 safe from
@@ -95,6 +100,7 @@ describe('/api/stats HTTP', () => {
 
   it('edge cache sits in front of the snapshot and never outlives the 5-minute cadence', async () => {
     const snap = await refreshStatsSnapshot(db.d1, NOW)
+    vi.setSystemTime(NOW)
     await statsResponse(req(), db.d1, SITE)
     await flushWaitUntil()
     const stored = cache.entries.get(`${SITE}/api/stats?v=stats-v2`)!
@@ -103,6 +109,34 @@ describe('/api/stats HTTP', () => {
     await refreshStatsSnapshot(db.d1, NOW + 1)
     // Same colo, still within TTL: served from the edge copy without touching D1.
     expect((await statsResponse(req(), db.d1, SITE)).headers.get('etag')).toBe(snap.etag)
+  })
+})
+
+// A copy stored late in a cycle must not hide the next snapshot for another full 5 minutes.
+describe('edge TTL for stats', () => {
+  const MIN = 60_000
+  it('expires just after the next snapshot is due', () => {
+    expect(edgeTtlFor(NOW, NOW)).toBe(300)
+    expect(edgeTtlFor(NOW, NOW + 4 * MIN + 50_000)).toBe(30)
+  })
+
+  it('a late snapshot is looked for again shortly, not after another full cycle', () => {
+    expect(edgeTtlFor(NOW, NOW + 6 * MIN)).toBe(15)
+  })
+
+  // The TTL must come from the snapshot actually served, stored on the edge copy.
+  it('stores the copy with the time left until the next snapshot', async () => {
+    await refreshStatsSnapshot(db.d1, NOW)
+    const stored = async () => {
+      await statsResponse(req(), db.d1, SITE)
+      await flushWaitUntil()
+      return Object.fromEntries(cache.entries.get(`${SITE}/api/stats?v=stats-v2`)!.headers)['cache-control']
+    }
+    vi.setSystemTime(NOW + 4 * MIN + 50_000)
+    expect(await stored()).toBe('public, max-age=30')
+    cache.entries.clear()
+    vi.setSystemTime(NOW + 6 * MIN)
+    expect(await stored()).toBe('public, max-age=15')
   })
 })
 

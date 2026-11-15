@@ -394,7 +394,7 @@ export const en: Dict = {
       'Asia Pacific Telecom merged into Far EasTone in December 2023; the legacy network is still distinguishable and is listed separately.',
       "Taiwan Mobile's mobile network (AS24158) and Taiwan Mobile Broadband (AS24163–24165) are reported separately.",
       'Academic and government networks are their own groups. Cloud, VPN, iCloud Private Relay and WARP addresses are not household connections: they get the gray light and are never counted.',
-      "Taiwanese networks not mapped to a brand are listed by ASN. The public daily download still pools them into one group, since a single ASN may be one person's own network.",
+      "Taiwanese networks not mapped to a brand are listed by ASN once they have at least 3 tests in the last 30 days. The public daily download still pools them into one group, since a single ASN may be one person's own network.",
     ],
     ispCols: { isp: 'Brand', asns: 'ASNs' },
     privacyHeading: 'Privacy',
