@@ -7,11 +7,14 @@ export interface Isp {
   zh: string
   en: string
   asns: number[]
+  /** Company shared by groups that are reported separately; defaults to `key`. */
+  carrier?: string
 }
 
 export const TW_ISPS: Isp[] = [
-  // AS3462 HiNet fixed, AS17421 mobile (Mobile Business Group)
-  { key: 'cht', zh: '中華電信', en: 'Chunghwa Telecom (HiNet)', asns: [3462, 17421] },
+  // Fixed and mobile are reported apart: the two networks can route to Cloudflare differently.
+  { key: 'cht', zh: '中華電信 HiNet', en: 'Chunghwa Telecom (HiNet)', asns: [3462], carrier: 'cht' },
+  { key: 'cht-mobile', zh: '中華電信行動', en: 'Chunghwa Telecom Mobile', asns: [17421], carrier: 'cht' },
   // AS24157 is the former Taiwan Star (merged 2023-12-01)
   { key: 'twm', zh: '台灣大哥大', en: 'Taiwan Mobile', asns: [24158, 24157] },
   { key: 'twmbb', zh: '台灣大寬頻', en: 'Taiwan Mobile Broadband (TFN Media)', asns: [24163, 24164, 24165] },
@@ -115,6 +118,11 @@ export function ispForAsn(asn: number | null | undefined): Isp | undefined {
 
 export function getIsp(key: string): Isp | undefined {
   return TW_ISPS.find((i) => i.key === key)
+}
+
+/** The company behind an ISP group: HiNet and Chunghwa mobile are one carrier, two groups. */
+export function carrierOf(key: string): string {
+  return getIsp(key)?.carrier ?? key
 }
 
 export function isHostingAsn(asn: number | null | undefined): boolean {

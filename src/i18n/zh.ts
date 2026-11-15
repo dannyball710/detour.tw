@@ -14,7 +14,7 @@ const redSub = (whose: string) => (km: number | null, ms: number | null) => {
 // No "you": the same plain line serves someone else's result.
 const greenSub = (ms: number | null) => (ms != null ? `連線在台灣就近完成，來回約 ${n(ms)} 毫秒。` : '連線在台灣就近完成。')
 const blueSub = (whose: string) => (pct: number | null) =>
-  '這是正常的就近連線。' + (pct != null ? `對照：台灣中華電信用戶有 ${pct}% 落在美國。` : '') + `${whose}列入國際對照組，不計入台灣統計。`
+  '這是正常的就近連線。' + (pct != null ? `對照：台灣中華電信 HiNet 用戶有 ${pct}% 落在美國。` : '') + `${whose}列入國際對照組，不計入台灣統計。`
 
 // The privacy note, shown in full on the methodology page (/methodology#privacy).
 const privacy =
@@ -381,7 +381,7 @@ export const zh = {
     ispHeading: '電信怎麼分組',
     ispLead: '統計以 ASN（自治系統號碼）判斷電信公司，再歸到一般人認得的品牌。登記名稱在不同資料庫寫法不一，所以不用名稱判斷。',
     ispNotes: [
-      '中華電信包含 HiNet 固網（AS3462）與行動網路（AS17421）。',
+      '中華電信的 HiNet 固網（AS3462）與行動網路（AS17421）分開統計。',
       '台灣之星已於 2023 年 12 月併入台灣大哥大，舊的 AS24157 歸在台灣大哥大。',
       '亞太電信已於 2023 年 12 月併入遠傳電信。舊網路仍可分辨，所以另列一組。',
       '台灣大哥大的行動網路（AS24158）和台灣大寬頻（AS24163–24165）分開統計。',

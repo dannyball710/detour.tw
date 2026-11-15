@@ -142,6 +142,11 @@ describe('derived values', () => {
     expect(ev.row.extra_km).toBe(ev.row.distance_km! - distanceToColoKm(seat.lat, seat.lon, 'TPE')!)
     expect(ev.row.isp_key).toBe('cht')
   })
+
+  // Fixed and mobile can route differently, so each Chunghwa network is its own group.
+  it('files Chunghwa mobile apart from HiNet', () => {
+    expect(evaluate(body(), { ...taipei, asn: 17421 }, NOW).row.isp_key).toBe('cht-mobile')
+  })
 })
 
 // A fabricated submission must not silently enter the stats; these are physical / cross-checked impossibilities.

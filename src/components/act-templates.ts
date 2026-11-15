@@ -1,3 +1,4 @@
+import { carrierOf } from '#/data/isps'
 import { SITE_URL, coloCity, fmtDate, fmtNum, ispName, pathFor } from '#/i18n'
 import type { StatsResponse, TestResult } from '#/lib/types'
 import { MIN_SAMPLE } from './StatsSummary'
@@ -25,7 +26,9 @@ const STATS_EN = `${SITE_URL}${pathFor('/stats', 'en')}`
 /** Share of the other carriers' tests landing in Taiwan, when there is enough data to quote. */
 function othersDomesticPct(stats: StatsResponse | null, ispKey: string): number | null {
   if (!stats) return null
-  const others = stats.isps.filter((i) => i.key !== ispKey && i.key !== 'other')
+  // "Other carriers" leaves out every group of the visitor's own company (HiNet and its mobile network).
+  const carrier = carrierOf(ispKey)
+  const others = stats.isps.filter((i) => carrierOf(i.key) !== carrier && i.key !== 'other')
   const n = others.reduce((s, i) => s + i.n, 0)
   if (n < MIN_SAMPLE) return null
   return Math.round((others.reduce((s, i) => s + i.n * i.domestic, 0) / n) * 100)
@@ -84,8 +87,8 @@ function fromStatistics(stats: StatsResponse | null): ActTemplates {
   const abroad = stats && cht && cht.n >= MIN_SAMPLE ? Math.round((1 - cht.domestic) * 100) : null
   const zhFacts =
     abroad != null && stats
-      ? `近 ${stats.windowDays} 天中華電信用戶連往 Cloudflare 網站的測試中，有 ${abroad}% 落在台灣以外的機房`
-      : '部分中華電信用戶連往 Cloudflare 網站的連線，會落在台灣以外的機房'
+      ? `近 ${stats.windowDays} 天中華電信 HiNet 用戶連往 Cloudflare 網站的測試中，有 ${abroad}% 落在台灣以外的機房`
+      : '部分中華電信 HiNet 用戶連往 Cloudflare 網站的連線，會落在台灣以外的機房'
   const enFacts =
     abroad != null && stats
       ? `${abroad}% of tests from Chunghwa Telecom (HiNet) users in Taiwan over the last ${stats.windowDays} days reached sites on Cloudflare through a data center outside Taiwan`

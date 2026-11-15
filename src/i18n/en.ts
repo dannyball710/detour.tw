@@ -14,7 +14,7 @@ const redSub = (whose: string) => (km: number | null, ms: number | null) =>
 const greenSub = (ms: number | null) => (ms != null ? `Handled nearby in Taiwan — about ${n(ms)} ms per round trip.` : 'Handled nearby in Taiwan.')
 const blueSub = (joins: string) => (pct: number | null) =>
   'Landing nearby is normal.' +
-  (pct != null ? ` In Taiwan, ${pct}% of Chunghwa Telecom tests land in the US.` : '') +
+  (pct != null ? ` In Taiwan, ${pct}% of Chunghwa Telecom (HiNet) tests land in the US.` : '') +
   ` ${joins} the international baseline, not the Taiwan statistics.`
 
 // The privacy note, shown in full on the methodology page (/methodology#privacy).
@@ -388,7 +388,7 @@ export const en: Dict = {
     ispLead:
       'Tests are attributed by ASN and grouped under the brand a customer would recognise. Registry organisation names differ between databases, so names are never used as the key.',
     ispNotes: [
-      'Chunghwa Telecom covers HiNet fixed broadband (AS3462) and its mobile network (AS17421).',
+      "Chunghwa Telecom's HiNet fixed broadband (AS3462) and its mobile network (AS17421) are reported separately.",
       'Taiwan Star merged into Taiwan Mobile in December 2023; its former AS24157 is counted under Taiwan Mobile.',
       'Asia Pacific Telecom merged into Far EasTone in December 2023; the legacy network is still distinguishable and is listed separately.',
       "Taiwan Mobile's mobile network (AS24158) and Taiwan Mobile Broadband (AS24163–24165) are reported separately.",

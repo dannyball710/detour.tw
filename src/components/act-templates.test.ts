@@ -50,11 +50,18 @@ describe('actTemplates', () => {
     }
   })
 
+  // HiNet and Chunghwa mobile are one company: quoting one against the other is not "other carriers".
+  it('leaves the visitor’s own carrier out of "other carriers"', () => {
+    const mobile = { ...red, isp: { key: 'cht-mobile', asn: 17421, asOrganization: null } }
+    const t = actTemplates(mobile, stats([isp('cht', 400, 0.04), isp('cht-mobile', 200, 0.5), isp('twm', 300, 0.96)]))
+    expect(t.isp).toContain('其他電信用戶有 96% 落在台灣')
+  })
+
   it('reports a detour with what this visitor measured', () => {
     const t = actTemplates(red, enough)
     expect(t.isp).toContain('2026/11/14')
     expect(t.isp).toContain('落在洛杉磯，延遲約 151 毫秒。同一時間，其他電信用戶有 96% 落在台灣')
-    expect(t.regulator).toContain('我是中華電信的用戶')
+    expect(t.regulator).toContain('我是中華電信 HiNet的用戶')
     expect(t.cloudflare).toContain('served from Los Angeles (LAX), about 151 ms per round trip')
     expect(t.cloudflare).toContain('cloudflare.com answered from Taipei in about 9 ms')
   })
@@ -62,7 +69,7 @@ describe('actTemplates', () => {
   // Someone whose own route is fine has nothing personal to report, but can still write in.
   it('falls back to the public statistics when the visitor had no detour', () => {
     for (const t of [actTemplates(green, enough), actTemplates(null, enough)]) {
-      expect(t.isp).toContain('近 30 天中華電信用戶連往 Cloudflare 網站的測試中，有 96% 落在台灣以外的機房')
+      expect(t.isp).toContain('近 30 天中華電信 HiNet 用戶連往 Cloudflare 網站的測試中，有 96% 落在台灣以外的機房')
       expect(t.isp).not.toContain('我是貴公司的用戶')
       expect(t.cloudflare).toContain('96% of tests from Chunghwa Telecom (HiNet) users in Taiwan over the last 30 days')
     }
@@ -75,7 +82,7 @@ describe('actTemplates', () => {
       expect(t.isp).not.toMatch(/\d+%/)
       expect(t.regulator).not.toMatch(/\d+%/)
       expect(t.cloudflare).not.toMatch(/\d+%/)
-      expect(t.isp).toContain('部分中華電信用戶')
+      expect(t.isp).toContain('部分中華電信 HiNet 用戶')
     }
     expect(actTemplates(red, stats([isp('twm', 29, 1)])).isp).not.toContain('其他電信用戶')
   })
