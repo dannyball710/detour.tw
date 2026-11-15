@@ -65,9 +65,16 @@ describe('actTemplates', () => {
     }
   })
 
+  // The carrier's message has no link: without the site's name the carrier cannot check the claim.
+  it('names detour.tw in every message to the carrier', () => {
+    for (const t of [actTemplates(red, enough), actTemplates(red, enough, true), actTemplates(green, enough)]) {
+      expect(t.isp).toContain('「網路出國了嗎」（detour.tw）')
+    }
+  })
+
   it('reports a detour with what this visitor measured', () => {
     const t = actTemplates(red, enough)
-    expect(t.isp).toContain('2026/11/14')
+    expect(t.isp).toContain('2026/11/14 用「網路出國了嗎」（detour.tw）測試')
     expect(t.isp).toContain('落在洛杉磯，延遲約 151 毫秒。同一時間，其他電信用戶有百分之 96 落在台灣')
     expect(t.regulator).toContain('我是中華電信 HiNet的用戶')
     expect(t.cloudflare).toContain('served from Los Angeles (LAX), about 151 ms per round trip')

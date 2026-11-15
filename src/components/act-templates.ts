@@ -25,6 +25,8 @@ const ZH_ASK_REGULATOR = '希望主管機關了解這個情況，協助電信業
 type ZhPct = (n: number) => string
 const PCT_ISP: ZhPct = (n) => `百分之 ${n} `
 const PCT_REGULATOR: ZhPct = (n) => ` ${n}% `
+// The carrier's message carries no link, so it names the site; the regulator's links the report.
+const ZH_SITE = '（detour.tw）'
 const STATS_ZH = `${SITE_URL}${pathFor('/stats', 'zh')}`
 const STATS_EN = `${SITE_URL}${pathFor('/stats', 'en')}`
 
@@ -42,15 +44,15 @@ function othersDomesticPct(stats: StatsResponse | null, ispKey: string): number 
 function fromOwnResult(r: TestResult, stats: StatsResponse | null): ActTemplates {
   const ms = Math.round(r.landing.rttMs)
   const others = othersDomesticPct(stats, r.isp.key)
-  const zhFacts = (pct: ZhPct) =>
-    `我在 ${fmtDate(r.createdAt, 'zh')} 用「網路出國了嗎」測試，連往 Cloudflare 的連線落在${coloCity(r.landing.iata, 'zh')}，延遲約 ${fmtNum(ms, 'zh')} 毫秒` +
+  const zhFacts = (pct: ZhPct, site = '') =>
+    `我在 ${fmtDate(r.createdAt, 'zh')} 用「網路出國了嗎」${site}測試，連往 Cloudflare 的連線落在${coloCity(r.landing.iata, 'zh')}，延遲約 ${fmtNum(ms, 'zh')} 毫秒` +
     (others != null ? `。同一時間，其他電信用戶有${pct(others)}落在台灣` : '')
   const isp = ispName(r.isp, 'en')
   const baseline = r.ref
     ? `, while cloudflare.com answered from ${coloCity(r.ref.iata, 'en')} in about ${fmtNum(Math.round(r.ref.rttMs), 'en')} ms`
     : ''
   return {
-    isp: `您好，我是貴公司的用戶。${zhFacts(PCT_ISP)}。${ZH_ASK_ISP}`,
+    isp: `您好，我是貴公司的用戶。${zhFacts(PCT_ISP, ZH_SITE)}。${ZH_ASK_ISP}`,
     regulator: `您好，我是${ispName(r.isp, 'zh')}的用戶。${zhFacts(PCT_REGULATOR)}。全台的匿名統計公開在 ${STATS_ZH} 。${ZH_ASK_REGULATOR}`,
     cloudflare:
       `Hello, I am an internet user in Taiwan on ${isp}. On ${fmtDate(r.createdAt, 'en')}, a test on detour.tw showed my connection ` +
@@ -69,14 +71,14 @@ function fromSharedResult(r: TestResult, stats: StatsResponse | null): ActTempla
   const others = othersDomesticPct(stats, r.isp.key)
   const zhIsp = ispName(r.isp, 'zh')
   const enIsp = ispName(r.isp, 'en')
-  const zhFacts = (pct: ZhPct) =>
-    `${fmtDate(r.createdAt, 'zh')}有一位${zhIsp}用戶用「網路出國了嗎」測試，連往 Cloudflare 的連線落在${coloCity(r.landing.iata, 'zh')}，延遲約 ${fmtNum(ms, 'zh')} 毫秒` +
+  const zhFacts = (pct: ZhPct, site = '') =>
+    `${fmtDate(r.createdAt, 'zh')}有一位${zhIsp}用戶用「網路出國了嗎」${site}測試，連往 Cloudflare 的連線落在${coloCity(r.landing.iata, 'zh')}，延遲約 ${fmtNum(ms, 'zh')} 毫秒` +
     (others != null ? `。同一時間，其他電信用戶有${pct(others)}落在台灣` : '')
   const baseline = r.ref
     ? `, while cloudflare.com answered from ${coloCity(r.ref.iata, 'en')} in about ${fmtNum(Math.round(r.ref.rttMs), 'en')} ms`
     : ''
   return {
-    isp: `您好，${zhFacts(PCT_ISP)}。${ZH_ASK_ISP}`,
+    isp: `您好，${zhFacts(PCT_ISP, ZH_SITE)}。${ZH_ASK_ISP}`,
     regulator: `您好，${zhFacts(PCT_REGULATOR)}。全台的匿名統計公開在 ${STATS_ZH} 。${ZH_ASK_REGULATOR}`,
     cloudflare:
       `Hello. On ${fmtDate(r.createdAt, 'en')}, a test on detour.tw by a ${enIsp} user in Taiwan showed the connection ` +
@@ -99,7 +101,7 @@ function fromStatistics(stats: StatsResponse | null): ActTemplates {
       ? `${abroad}% of tests from Chunghwa Telecom (HiNet) users in Taiwan over the last ${stats.windowDays} days reached sites on Cloudflare through a data center outside Taiwan`
       : 'some connections from Chunghwa Telecom (HiNet) users in Taiwan reach sites on Cloudflare through a data center outside Taiwan'
   return {
-    isp: `您好，根據「網路出國了嗎」（detour.tw）的公開統計，${zhFacts(PCT_ISP)}。${ZH_ASK_ISP}`,
+    isp: `您好，根據「網路出國了嗎」${ZH_SITE}的公開統計，${zhFacts(PCT_ISP)}。${ZH_ASK_ISP}`,
     regulator: `您好，根據「網路出國了嗎」的公開統計（${STATS_ZH} ），${zhFacts(PCT_REGULATOR)}。${ZH_ASK_REGULATOR}`,
     cloudflare:
       `Hello. According to public measurements collected by detour.tw (${STATS_EN}), ${enFacts}. ` +
