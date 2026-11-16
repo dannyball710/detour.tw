@@ -1553,6 +1553,20 @@ main > .hero:first-child {
   }
 }
 
+/*
+ * On a desktop the table fits instead of scrolling: long carrier names ("Taiwan Mobile Broadband
+ * (TFN Media)") and column heads wrap at their spaces.
+ */
+@media (min-width: 960px) {
+  .board tbody th,
+  .board thead th {
+    white-space: normal;
+  }
+  .board thead th {
+    vertical-align: bottom;
+  }
+}
+
 .board tbody th .code {
   display: inline-block;
   min-width: 2.6em;
