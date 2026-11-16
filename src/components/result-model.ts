@@ -184,6 +184,7 @@ export function notesOf(r: TestResult, lang: Lang): string[] {
   if (r.category === 'foreign-sim') notes.push(t.foreignSim)
   if (r.notCountedReason === 'suspicious') notes.push(t.suspicious)
   if (r.notCountedReason === 'opt-out') notes.push(t.optOut)
+  if (r.notCountedReason === 'unstable-route') notes.push(t.unstableRoute)
   return notes
 }
 

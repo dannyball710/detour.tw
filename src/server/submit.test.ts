@@ -78,8 +78,18 @@ describe('hard validation', () => {
     expect(await submit({}, { token })).toMatchObject({ status: 400, error: 'ip_mismatch' })
   })
 
-  it('rejects a landing colo that neither the server nor the token saw', async () => {
-    expect(await submit({ own: { colo: 'TPE', rtts: [8, 9, 10] } })).toMatchObject({ status: 400, error: 'colo_mismatch' })
+  // Routing can switch data centers mid-test: the visitor still sees the result, the data never stores it.
+  it('shows but never stores a landing colo that neither the server nor the token saw', async () => {
+    const r = await submit({ own: { colo: 'TPE', rtts: [8, 9, 10] } })
+    expect(r).toMatchObject({ ok: true, result: { id: null, counted: false, notCountedReason: 'unstable-route' } })
+    expect(countRows()).toBe(0)
+  })
+
+  // Showing the result must not turn the token into a free retry: it is spent like any other.
+  it('a mismatched submit still spends its token', async () => {
+    const token = await createToken(SECRET, ipKey(view.ip), 'LAX', T0)
+    await submit({ own: { colo: 'TPE', rtts: [8, 9, 10] } }, { token })
+    expect(await submit({}, { token })).toMatchObject({ status: 409, error: 'replay' })
   })
 
   it('accepts the token colo when the request colo changed in between', async () => {

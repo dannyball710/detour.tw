@@ -117,6 +117,7 @@ export const zh = {
     foreignSim: '你好像人在台灣、用的是外國門號（例如旅遊 eSIM），所以列入國際對照組。',
     suspicious: '這次的數字有點不尋常，照常顯示，但不計入統計。',
     optOut: '你關閉了共享數據，這次沒有儲存任何資料。',
+    unstableRoute: '測試途中 Cloudflare 的路由切換了機房，結果可能不準，這次沒有儲存。',
     you: '你在',
     youValue: (region: string) => `${region}（大約位置）`,
     network: '你的網路',
@@ -164,7 +165,8 @@ export const zh = {
     copyLink: '複製連結',
     linkCopied: '已複製連結',
     copyFailed: '複製失敗，請手動選取',
-    noId: '你關閉了「共享數據」，這次的結果沒有儲存。結果連結和結果圖要有儲存的結果才做得出來，但文字還是可以直接分享。',    contributeAndShare: '開啟共享數據並重測，產生連結和圖',
+    noId: '你關閉了「共享數據」，這次的結果沒有儲存。結果連結和結果圖要有儲存的結果才做得出來，但文字還是可以直接分享。',
+    noIdUnsaved: '這次的結果沒有儲存，做不出結果連結和結果圖，但文字還是可以直接分享。重測一次就能產生連結和圖。',    contributeAndShare: '開啟共享數據並重測，產生連結和圖',
     textOnly: '只分享文字',
     text: {
       out: (city: string, km: number | null, url: string) =>

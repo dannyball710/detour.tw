@@ -118,6 +118,7 @@ export const en: Dict = {
       "You seem to be in Taiwan on a foreign mobile network (e.g. a travel eSIM), so this joins the international baseline.",
     suspicious: 'These numbers look unusual. Shown as usual, not counted.',
     optOut: '"Share data" is off — nothing from this test was stored.',
+    unstableRoute: 'Cloudflare switched data centers during the test, so the result may be off. It was not stored.',
     you: 'You are in',
     youValue: (region: string) => `${region} (approx.)`,
     network: 'Your network',
@@ -166,7 +167,8 @@ export const en: Dict = {
     copyLink: 'Copy link',
     linkCopied: 'Link copied',
     copyFailed: "Couldn't copy. Please select the text by hand",
-    noId: '"Share data" is off, so this result was not stored. A result link and image need a stored result; the text can still be shared.',    contributeAndShare: 'Turn on "Share data" and retest to get a link and image',
+    noId: '"Share data" is off, so this result was not stored. A result link and image need a stored result; the text can still be shared.',
+    noIdUnsaved: 'This result was not stored, so there is no result link or image; the text can still be shared. Test again to get a link and image.',    contributeAndShare: 'Turn on "Share data" and retest to get a link and image',
     textOnly: 'Share text only',
     text: {
       out: (city: string, km: number | null, url: string) =>

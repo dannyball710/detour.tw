@@ -77,6 +77,7 @@ function SheetContent({ lang, result, onContribute, shared }: Pick<Props, 'lang'
   const files = useRef<Partial<Record<ImageLayout, File>>>({})
   const canNative = typeof navigator.share === 'function'
   const id = result.id
+  const optedOut = result.notCountedReason === 'opt-out'
   const [copied, setCopied] = useState<'copied' | 'failed' | null>(null)
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(copyTimer.current), [])
@@ -176,8 +177,9 @@ function SheetContent({ lang, result, onContribute, shared }: Pick<Props, 'lang'
 
       {!id && (
         <div className="sheet-noid">
-          <p>{t.noId}</p>
-          {onContribute && (
+          {/* Only an opt-out is fixed by turning "Share data" on; other unstored results just need a retest. */}
+          <p>{optedOut ? t.noId : t.noIdUnsaved}</p>
+          {optedOut && onContribute && (
             <button type="button" className="btn btn-primary" onClick={onContribute}>
               {t.contributeAndShare}
             </button>

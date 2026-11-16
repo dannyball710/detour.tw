@@ -205,8 +205,10 @@ export async function processSubmit(body: SubmitRequest, view: ServerView, deps:
   if (age < MIN_TOKEN_AGE_MS) return fail(400, 'too_fast')
   if (age > MAX_TOKEN_AGE_MS) return fail(400, 'token_expired')
   if (!timingSafeEqual(token.ip, await ipHashForToken(secret, ipKey(view.ip)))) return fail(400, 'ip_mismatch')
-  // The browser can switch colo between /api/start and submit only in rare edge cases; anything else is fabricated.
-  if (body.own.colo !== view.colo && body.own.colo !== token.colo) return fail(400, 'colo_mismatch')
+  // The measured colo should be where this Worker ran (now or at /api/start). Cloudflare routing can
+  // switch data centers mid-test, so a mismatch is shown, not rejected; it is never stored either,
+  // since a fabricated colo looks the same.
+  const coloMismatch = body.own.colo !== view.colo && body.own.colo !== token.colo
 
   // Burn the nonce last, so it is only spent by an otherwise valid request.
   const nonce = await db
@@ -217,6 +219,9 @@ export async function processSubmit(body: SubmitRequest, view: ServerView, deps:
 
   const ev = evaluate(body, view, now, deps.skipRefIdentity)
 
+  if (coloMismatch) {
+    return { ok: true, result: { ...rowToResult(ev.row), id: null, counted: false, notCountedReason: 'unstable-route' } }
+  }
   if (deps.foreignOrigin) {
     // Another site's page: same computation, nothing stored.
     return { ok: true, result: { ...rowToResult(ev.row), id: null, counted: false, notCountedReason: 'foreign-origin' } }

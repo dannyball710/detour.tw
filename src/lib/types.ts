@@ -16,6 +16,8 @@ export type Category = 'tw' | 'intl' | 'foreign-sim' | 'roaming' | 'vpn'
 
 export type NotCountedReason =
   | 'opt-out'
+  /** The measured colo is not where the Worker ran (routing switched mid-test): shown, not stored. */
+  | 'unstable-route'
   /** Not submitted by our own page (another site, or no Origin): shown, not stored. */
   | 'foreign-origin'
   | 'intl'
