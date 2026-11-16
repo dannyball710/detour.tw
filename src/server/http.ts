@@ -17,6 +17,26 @@ export function error(status: number, code: string): Response {
 }
 
 /**
+ * True unless the request carries an origin listed in `allowed` (comma-separated, the
+ * ALLOWED_ORIGINS var). Browsers send Origin on every POST, same-origin included, so our listed
+ * pages pass; another site's page, an opaque "null" origin and a request without the header
+ * (scripts, curl) are all foreign. The Worker's own origin is not trusted by itself: other test
+ * domains may be bound to this Worker, and their pages must not store results. `devOwnOrigin`
+ * (dev server only) lets localhost on any port through.
+ */
+export function isForeignOrigin(request: Request, allowed = '', devOwnOrigin = false): boolean {
+  const origin = request.headers.get('origin')
+  if (origin == null) return true
+  if (devOwnOrigin && origin === new URL(request.url).origin) return false
+  // A stray comma or a listed "null" must never let an empty or opaque origin through.
+  return !allowed
+    .split(',')
+    .map((o) => o.trim().replace(/\/+$/, ''))
+    .filter((o) => o !== '' && o !== 'null')
+    .includes(origin)
+}
+
+/**
  * Client IP as Cloudflare saw it. The Vite dev server (Miniflare) does not always set the header,
  * so dev falls back to loopback; production without it is treated as unusable.
  */

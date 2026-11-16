@@ -164,6 +164,8 @@ export interface SubmitDeps {
   now: number
   /** Dev only: skip ref-ip / ref-loc because the dev server sees loopback, not our public IP. */
   skipRefIdentity?: boolean
+  /** Not sent by our own page (another site, or no Origin): answered as usual, never stored. */
+  foreignOrigin?: boolean
 }
 
 export type SubmitOutcome = { ok: true; result: TestResult } | { ok: false; status: number; error: string }
@@ -215,6 +217,10 @@ export async function processSubmit(body: SubmitRequest, view: ServerView, deps:
 
   const ev = evaluate(body, view, now, deps.skipRefIdentity)
 
+  if (deps.foreignOrigin) {
+    // Another site's page: same computation, nothing stored.
+    return { ok: true, result: { ...rowToResult(ev.row), id: null, counted: false, notCountedReason: 'foreign-origin' } }
+  }
   if (!body.contribute) {
     // Opt-out: same computation, nothing stored.
     return { ok: true, result: { ...rowToResult(ev.row), id: null, counted: false, notCountedReason: 'opt-out' } }

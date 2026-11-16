@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
 import { serverViewFromCf } from '#/server/classify'
-import { cfOf, clientIp, error, ipKey, isPrivateIp, json, readBodyCapped } from '#/server/http'
+import { cfOf, clientIp, error, ipKey, isForeignOrigin, isPrivateIp, json, readBodyCapped } from '#/server/http'
 import { MAX_BODY_BYTES, parseSubmit, processSubmit } from '#/server/submit'
 
 export const Route = createFileRoute('/api/submit')({
@@ -25,6 +25,7 @@ export const Route = createFileRoute('/api/submit')({
             now: Date.now(),
             // In dev the reference trace sees our public IP while this server sees loopback.
             skipRefIdentity: import.meta.env.DEV && isPrivateIp(ip),
+            foreignOrigin: isForeignOrigin(request, env.ALLOWED_ORIGINS, import.meta.env.DEV),
           })
           if (!outcome.ok) return error(outcome.status, outcome.error)
           return json(outcome.result)

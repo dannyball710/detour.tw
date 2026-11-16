@@ -1,5 +1,52 @@
 import { describe, expect, it } from 'vitest'
-import { ipKey } from './http'
+import { ipKey, isForeignOrigin } from './http'
+
+describe('isForeignOrigin', () => {
+  const ALLOWED = 'https://detour.tw'
+  const req = (origin?: string, url = 'https://detour.tw/api/submit') =>
+    new Request(url, { method: 'POST', headers: origin != null ? { origin } : {} })
+
+  it('our listed site is not foreign', () => {
+    expect(isForeignOrigin(req('https://detour.tw'), ALLOWED)).toBe(false)
+  })
+
+  it('another site, a lookalike subdomain or an opaque "null" origin is foreign', () => {
+    expect(isForeignOrigin(req('https://evil.example'), ALLOWED)).toBe(true)
+    expect(isForeignOrigin(req('https://detour.tw.evil.example'), ALLOWED)).toBe(true)
+    expect(isForeignOrigin(req('http://detour.tw'), ALLOWED)).toBe(true)
+    expect(isForeignOrigin(req('null'), ALLOWED)).toBe(true)
+  })
+
+  // Our pages always send Origin with the POST; a request without it is a script, not our page.
+  it('no Origin header is foreign', () => {
+    expect(isForeignOrigin(req(), ALLOWED)).toBe(true)
+  })
+
+  // Test domains bound to the same Worker run the same code: their own pages must not store results.
+  it('another domain bound to this Worker is foreign on its own pages', () => {
+    expect(isForeignOrigin(req('https://test.example', 'https://test.example/api/submit'), ALLOWED)).toBe(true)
+  })
+
+  // The dev server runs on localhost at whatever port; only there is the own origin trusted.
+  it('the own origin passes only on the dev server', () => {
+    const local = req('http://localhost:3100', 'http://localhost:3100/api/submit')
+    expect(isForeignOrigin(local, ALLOWED, true)).toBe(false)
+    expect(isForeignOrigin(local, ALLOWED, false)).toBe(true)
+  })
+
+  it('matches listed origins exactly, ignoring spaces and a trailing slash', () => {
+    const list = ' https://www.detour.tw/ ,https://detour.tw'
+    expect(isForeignOrigin(req('https://www.detour.tw'), list)).toBe(false)
+    expect(isForeignOrigin(req('https://detour.tw'), list)).toBe(false)
+    expect(isForeignOrigin(req('https://www.detour.tw.evil'), list)).toBe(true)
+  })
+
+  it('a stray comma or a listed "null" never lets an empty or opaque origin through', () => {
+    expect(isForeignOrigin(req('null'), 'null,')).toBe(true)
+    expect(isForeignOrigin(req(''), 'https://detour.tw,')).toBe(true)
+    expect(isForeignOrigin(req('https://detour.tw'), '')).toBe(true)
+  })
+})
 
 // One IPv6 household owns a whole /64; keying by full address would let it rotate past every per-IP control.
 describe('ipKey', () => {

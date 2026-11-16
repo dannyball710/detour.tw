@@ -16,6 +16,8 @@ export type Category = 'tw' | 'intl' | 'foreign-sim' | 'roaming' | 'vpn'
 
 export type NotCountedReason =
   | 'opt-out'
+  /** Not submitted by our own page (another site, or no Origin): shown, not stored. */
+  | 'foreign-origin'
   | 'intl'
   | 'foreign-sim'
   | 'roaming'

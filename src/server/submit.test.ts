@@ -32,7 +32,10 @@ beforeEach(() => {
 
 const countRows = () => (db.sqlite.prepare('SELECT COUNT(*) AS n FROM tests').get() as { n: number }).n
 
-async function submit(over: Partial<SubmitRequest> = {}, opts: { view?: Partial<ServerView>; age?: number; token?: string } = {}) {
+async function submit(
+  over: Partial<SubmitRequest> = {},
+  opts: { view?: Partial<ServerView>; age?: number; token?: string; foreignOrigin?: boolean } = {},
+) {
   const v = { ...view, ...opts.view }
   const token = opts.token ?? (await createToken(SECRET, ipKey(v.ip), 'LAX', T0))
   const body: SubmitRequest = {
@@ -46,7 +49,7 @@ async function submit(over: Partial<SubmitRequest> = {}, opts: { view?: Partial<
     lang: 'zh',
     ...over,
   }
-  return processSubmit(body, v, { db: db.d1, secret: SECRET, now: T0 + (opts.age ?? 5_000) })
+  return processSubmit(body, v, { db: db.d1, secret: SECRET, now: T0 + (opts.age ?? 5_000), foreignOrigin: opts.foreignOrigin })
 }
 
 // Hard failures reject the request outright: these are the cheap ways to fabricate or replay a test.
@@ -267,6 +270,20 @@ describe('opt-out', () => {
     const r = await submit({ contribute: false })
     expect(r).toMatchObject({ ok: true, result: { id: null, counted: false, notCountedReason: 'opt-out', light: 'red' } })
     expect(countRows()).toBe(0)
+  })
+})
+
+// Another site's page can run the test, but its visitors must not feed the statistics.
+describe('foreign origin', () => {
+  it('returns a full result but stores no test row', async () => {
+    const r = await submit({}, { foreignOrigin: true })
+    expect(r).toMatchObject({ ok: true, result: { id: null, counted: false, notCountedReason: 'foreign-origin', light: 'red' } })
+    expect(countRows()).toBe(0)
+  })
+
+  it('still rejects a bad token: the check is not a way around validation', async () => {
+    const r = await submit({}, { foreignOrigin: true, token: 'forged' })
+    expect(r).toMatchObject({ ok: false, error: 'invalid_token' })
   })
 })
 

@@ -47,7 +47,11 @@
 		"crons": ["*/5 * * * *", "17 * * * *"]
 	},
 	"vars": {
-		"SITE_URL": "https://detour.tw"
+		"SITE_URL": "https://detour.tw",
+		// Comma-separated origins whose pages may store results via /api/submit; every other origin,
+		// including other domains bound to this Worker, is shown its result but never stored.
+		// The local dev server also allows its own localhost origin.
+		"ALLOWED_ORIGINS": "https://detour.tw"
 	},
 	// TOKEN_SECRET — HMAC key for test tokens and daily IP hashes. Set by CI (--secrets-file);
 	// local dev: put TOKEN_SECRET=... in .dev.vars
